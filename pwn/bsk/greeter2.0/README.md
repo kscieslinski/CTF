@@ -43,3 +43,4 @@ The question arises how can we exploit this bug. Let's see what can we override 
 ![](img/stack0.png)
 
 So the \0 character replaces the least significant bit of _$ebp_. Moreover new value of _$ebp_ now points into the attacker controlled buffer as: 0xffffcd00 belongs to [0xffffcc7c, 0xffffcd7c] range.
+I have found on internet a really [good explanation](https://sploitfun.wordpress.com/2015/06/07/off-by-one-vulnerability-stack-based-2/) on how to exploit such vulnerability.
