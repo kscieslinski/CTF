@@ -9,7 +9,7 @@
 - PIE: no
 
 The source code:
-```
+```c
 /*
 Compile with:
 gcc -m32 -fno-stack-protector -mpreferred-stack-boundary=2 greeter2.0.c -o greeter2.0
