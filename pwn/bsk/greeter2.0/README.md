@@ -42,4 +42,4 @@ We can easily spot that a vulnerable part of code is the _scanf_ function which 
 The question arises how can we exploit this bug. Let's see what can we override with the null character. Here is how the stack looks like before and after providing input of length >= 256.
 ![](img/stack0.png)
 
-
+So the \0 character replaces the least significant bit of _$ebp_. Moreover new value of _$ebp_ now points into the attacker controlled buffer as: 0xffffcd00 belongs to [0xffffcc7c, 0xffffcd7c] range.
