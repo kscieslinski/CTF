@@ -9,7 +9,7 @@
 - PIE: no
 
 The source code:
-```c
+```
 /*
 Compile with:
 gcc -m32 -fno-stack-protector -mpreferred-stack-boundary=2 greeter2.0.c -o greeter2.0
@@ -36,7 +36,10 @@ int main(void) {
 }
 ```
 
-We can easily spot that a vulnerable part of code is the _scanf_ function which will not only read 256 characters but also place additional null byte \0 character at the end of loaded input. In total scanf will try to place 257 bytes into buffer. Therefore the \0 character will overflow the buffer by one byte.
+We can easily spot that a vulnerable part of code is the _scanf_ function which will not only read 256 characters but also place a null byte \0 character at the end of loaded input. The \0 character will overflow the buffer.
 ![](img/buffer.png)
+
+The question arises how can we exploit this bug. Let's see what can we override with the null character. The stack:
+![](img/stack0.png)
 
 
