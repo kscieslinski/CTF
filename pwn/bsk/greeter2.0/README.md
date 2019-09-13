@@ -36,7 +36,7 @@ int main(void) {
 }
 ```
 
-We can easily spot that a vulnerable part of code is the _scanf_ function which will not only read 256 characters but also place a null byte \0 character at the end of loaded input. The \0 character will overflow the buffer.
+We can easily spot that a vulnerable part of code is the _scanf_ function which will not only read 256 characters but also place additional null byte \0 character at the end of loaded input. In total scanf will try to place 257 bytes into buffer. Therefore the \0 character will overflow the buffer by one byte.
 ![](img/buffer.png)
 
 
