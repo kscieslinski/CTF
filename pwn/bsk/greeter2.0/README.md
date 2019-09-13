@@ -39,7 +39,7 @@ int main(void) {
 We can easily spot that a vulnerable part of code is the _scanf_ function which will not only read 256 characters but also place a null byte \0 character at the end of loaded input. The \0 character will overflow the buffer.
 ![](img/buffer.png)
 
-The question arises how can we exploit this bug. Let's see what can we override with the null character. The stack:
+The question arises how can we exploit this bug. Let's see what can we override with the null character. Here is how the stack looks like before and after providing input of length >= 256.
 ![](img/stack0.png)
 
 
