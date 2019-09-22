@@ -36,6 +36,7 @@ int main(void) {
 
 ### Enumeration
 First lets check the protections.
+</br>
 ![](img/protection.png)  
 Moreover from the task content we know that ASLR is disabled with:
 ```bash
@@ -64,19 +65,19 @@ pop ebp
 
 The above sequence will be called twice: first when leaving the `greet` function and secondly when leaving the `main` function. This should allow us not only to override _\$eip_ with value of our choice but also to control the stack arguments.
 
-Here is how the flow will look like:
+Here is how the flow will look like. We start with following stack
 ![](img/stack0.png)
 
-</br>
-</br>
-### Exploit
-You might got lost in the above explanation, but I hope everything will become clear soon. Our plan:
-- [ ] Override the lsb of _\$ebp_ stored on stack with 0x0, so that the value now points to the middle of the buffer.
-</br>
+Thats how the stack looks like after providing our payload. Notice how _\x00_ overflows the lsb of old _\$ebp_ stored on stack.
+![](img/stack1.png)
 
+The first `leave; ret` sequence will make _\$ebp_ point to the middle of the buffer.
+![](img/stack2.png)
 
-- [ ] first `leave; ret` sequence will make _\$ebp_ point to the middle of the buffer.
-- [ ] second `leave; ret` sequence will make _\$esp_ point to the middle of the buffer.
-- [ ] `ret` will override _\$eip_ with the value stored in the buffer
+The second `leave; ret` sequence will make _\$esp_ point to the middle of the buffer. And `ret` will override _\$eip_ with the value stored in the buffer
+![](img/stack3.png =100x)
+ 
+</br>
+</br>
 
 
