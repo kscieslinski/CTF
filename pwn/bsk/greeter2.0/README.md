@@ -66,16 +66,19 @@ pop ebp
 The above sequence will be called twice: first when leaving the `greet` function and secondly when leaving the `main` function. This should allow us not only to override _\$eip_ with value of our choice but also to control the stack arguments.
 
 Here is how the flow will look like. We start with following stack
-![](img/stack0.png)
+<img src="img/stack0.png" alt="stack0" width="250"/>
+</br>
 
-Thats how the stack looks like after providing our payload. Notice how _\x00_ overflows the lsb of old _\$ebp_ stored on stack.
-![](img/stack1.png)
+Thats how the stack looks like after providing our payload. Notice how _\x00_ overrides the lsb of old _\$ebp_ stored on stack.
+<img src="img/stack1.png" alt="stack1" width="150"/>
+</br>
 
 The first `leave; ret` sequence will make _\$ebp_ point to the middle of the buffer.
-![](img/stack2.png)
+<img src="img/stack2.png" alt="stack2" width="300"/>
+</br>
 
 The second `leave; ret` sequence will make _\$esp_ point to the middle of the buffer. And `ret` will override _\$eip_ with the value stored in the buffer
-![](img/stack3.png =100x)
+<img src="img/stack3.png" alt="stack3" width="300"/>
  
 </br>
 </br>
