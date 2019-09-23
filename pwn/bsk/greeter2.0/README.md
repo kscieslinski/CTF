@@ -80,19 +80,17 @@ Thats how the stack looks like after providing our payload. Notice how _\x00_ ov
 
 
 The first `leave; ret` sequence will make _\$ebp_ point to the middle of the buffer.
-</br>
+
 <p align="center">
 	<img src="img/stack2.png" alt="stack2" width="500" align="left"/>
 </p>
-</br>
+
 
 The second `leave; ret` sequence will make _\$esp_ point to the middle of the buffer. And `ret` will override _\$eip_ with the value stored in the buffer
-</br>
+
 <p align="center">
 	<img src="img/stack3.png" alt="stack3" width="500" align="left"/>
 </p>
  
-</br>
-</br>
 
 
