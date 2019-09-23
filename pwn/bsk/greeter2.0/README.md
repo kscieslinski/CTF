@@ -68,28 +68,28 @@ The above sequence will be called twice: first when leaving the `greet` function
 Here is how the flow will look like. We start with following stack.
 
 <p align="center">
-	<img src="img/stack0.png" alt="stack0" width="500"/>
+	<img src="img/stack0.png" alt="stack0" width="350"/>
 </p>
 
 
 Thats how the stack looks like after providing our payload. Notice how _\x00_ overrides the lsb of old _\$ebp_ stored on stack.
 
 <p align="center">
-	<img src="img/stack1.png" alt="stack1" width="500"/>
+	<img src="img/stack1.png" alt="stack1" width="400"/>
 </p>
 
 
 The first `leave; ret` sequence will make _\$ebp_ point to the middle of the buffer.
 
 <p align="center">
-	<img src="img/stack2.png" alt="stack2" width="500"/>
+	<img src="img/stack2.png" alt="stack2" width="400"/>
 </p>
 
 
 The second `leave; ret` sequence will make _\$esp_ point to the middle of the buffer. And `ret` will override _\$eip_ with the value stored in the buffer
 
 <p align="center">
-	<img src="img/stack3.png" alt="stack3" width="500"/>
+	<img src="img/stack3.png" alt="stack3" width="400"/>
 </p>
  
 
