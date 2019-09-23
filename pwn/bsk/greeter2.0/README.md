@@ -74,7 +74,9 @@ Here is how the flow will look like. We start with following stack.
 
 Thats how the stack looks like after providing our payload. Notice how _\x00_ overrides the lsb of old _\$ebp_ stored on stack.
 </br>
-<img src="img/stack1.png" alt="stack1" width="500" align="left"/>
+<p align="center">
+<img src="img/stack1.png" alt="stack1" width="500"/>
+</p>
 </br>
 
 The first `leave; ret` sequence will make _\$ebp_ point to the middle of the buffer.
