@@ -67,7 +67,9 @@ The above sequence will be called twice: first when leaving the `greet` function
 
 Here is how the flow will look like. We start with following stack.
 </br>
-<img src="img/stack0.png" alt="stack0" width="500" align="center"/>
+<p align="center">
+<img src="img/stack0.png" alt="stack0" width="500"/>
+</p>
 </br>
 
 Thats how the stack looks like after providing our payload. Notice how _\x00_ overrides the lsb of old _\$ebp_ stored on stack.
