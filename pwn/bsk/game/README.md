@@ -48,7 +48,7 @@ Let's look at a deassembled code:
 If attacker provides a negative number when prompt for action, the final value in eax will come from the value placed on the stack right above the actions table.
 Lets examine the stack layout.
 
-Run the game under gdb and create a warrior with 27hp, 2strenght and 1 luck point.
+Run the game under gdb and create a warrior with 27 hp, 2 strenght and 1 luck point.
 
 ![](img/atributes.png)
 
@@ -90,7 +90,7 @@ First we need to find the address of hit function. It is stable as the binary ha
 
 ![](img/hit.png)
 
-Now let's use very useful trick to build poc. It allows to mix python input with not closing the stdin pipe.
+Now let's use very useful trick to build poc. It allows to mix python input without closing the stdin pipe.
 
 ![](img/poc.png)
 
