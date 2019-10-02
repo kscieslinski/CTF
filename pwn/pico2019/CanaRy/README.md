@@ -33,7 +33,7 @@ But we immediately get _*** Stack Smashing Dectected ***_ alert. By reading the 
 
 ![](img/canary.png)
 
-But this prevention mechanism has one big gap! The canary is same in each program instance. It is only 4 bytes long so we could try to brute force the canary in time $2^32$, but we will be smarter. We will brute force the canary byte by byte in time 4 * 256. How? First we will brute the fist byte, by overflowing the _buf_ by just one byte. Each time the overflowing byte will be different. And if we get no _*** Stack Smashing Detected ***_ error this means that we found the correct byte. Next we will overflow the _buf_ with two bytes where the first byte is the one we found in previous step. We will continue till we find all 4 bytes.
+But this prevention mechanism has one big gap! The canary is same in each program instance. It is only 4 bytes long so we could try to brute force the canary in time 2^32, but we will be smarter. We will brute force the canary byte by byte in time 4 * 256. How? First we will brute the fist byte, by overflowing the _buf_ by just one byte. Each time the overflowing byte will be different. And if we get no _*** Stack Smashing Detected ***_ error this means that we found the correct byte. Next we will overflow the _buf_ with two bytes where the first byte is the one we found in previous step. We will continue till we find all 4 bytes.
 
 ![](img/solved_canary.png)
 
