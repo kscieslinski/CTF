@@ -52,5 +52,4 @@ We will try to bruteforce the `display_flag` address by overriding only 2 least 
 
 Ha, after few runs we finally got the flag!
 
-
-<img src="img/brute_display_flag_addr.png" alt="brute_display_flag_addr" width="1800"/>
+![](img/brute_display_flag_addr.png)
