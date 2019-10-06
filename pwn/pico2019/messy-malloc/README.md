@@ -148,6 +148,7 @@ gdb-peda$ x/256gx 0x00603000
 0x6036c0:	0x0000000000000000	0x0000000000020941
 0x6036d0:	0x0000000000000000	0x0000000000000000
 [...]
+```
 
 We can see that [0x603660 - 0x60368f] chunk contains the `user struct`. Block 0x00000000006036a0 is a `char *username` field of a struct pointing to [0x6036a0-0x6036bf] username chunk.
 
