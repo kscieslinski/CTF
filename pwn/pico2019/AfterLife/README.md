@@ -59,11 +59,26 @@ And in this state we are left with the undermentioned instructions:
 
 ```c
 gets(first);
-seventh=malloc(256);
+seventh=malloc(256); // will call unlink(first)
 exit(0);
 ```
 
 Not much to play with? Well, `gets` will change everything. Our plan is to:
 - [ ] prepare the exploit with `gets`
-- [ ] `malloc` call will override the GOT table
+- [ ] `malloc` call will overwrite the GOT table
 - [ ] `exit(0)` instead of calling `exit@libc` will invoke `win` function
+
+
+So how the exploit should look like? Let's check the `unlink` macro which will be called on `first`.
+
+```c
+unlink(fist):
+  FD = first->fd
+  BK = first->bk
+  FD->bk = BK
+  BK->fd = FD
+```
+
+So can we just make `first` chunk look like:
+` [prevsize][size][address of got@exit - 12][address of win function]` ?
+Well 
