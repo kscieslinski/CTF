@@ -6,7 +6,7 @@
 
 
 ### Enumeration
-The program contains two obvious vulnerabilities:
+The program has two obvious vulnerabilities:
 
 ```c
 [...]
@@ -25,7 +25,7 @@ gets(first);
 ### Exploit
 To obtain a flag we have to call `win` function, meaning we need to find a way to redirect code execution. There are two most popular ways to redirect code. One is based on overwriting the return address and the other one is to overwrite the address placed in GOT table. Here we will try the GOT one by overwriting the address under `got.exit` with `win` function address.
 
-Ok, but how can we make a program write to GOT table? Yes, we do have a vulnerable `gets`, but we cannot just override the whole memory hoping that we are lucky and we wont cause any SIGSEV. We need to be smarter.
+Ok, but how can we make a program write to GOT table? Yes, we do have a vulnerable `gets`, but we cannot just overwrite the whole memory hoping that we are lucky and we wont cause any SIGSEV. We need to be smarter.
 
 We will use [unlink macro](https://heap-exploitation.dhavalkapil.com/attacks/unlink_exploit.html) to write for us. I won't explain this technique in details as there are good materials avaible in internet.
 
@@ -83,4 +83,10 @@ So can we just make `first` chunk look like:
 
 ![](img/first1.png)
 
-Well 
+Well `unlink` macro will overwrite the GOT table with `win` function address which is what we want. But it will also try to overwrite some instructions in the `win` function. And this would cause SIGSEV as code segments are usually not writable.
+
+So we will have to bypass it. We will extend our payload with a short shellcode which will call a `win` function:
+
+![](img/first2.png)
+
+Now `FD->bk = BK` will overwrite a GOT table with address of our shellcode. `Then exit(0)` will jmp to the shellcode which will finaly call `win` function!
