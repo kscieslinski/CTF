@@ -90,3 +90,5 @@ So we will have to bypass it. We will extend our payload with a short shellcode 
 ![](img/first2.png)
 
 Now `FD->bk = BK` will overwrite a GOT table with address of our shellcode. `Then exit(0)` will jmp to the shellcode which will finaly call `win` function!
+
+Note that the above was possible only because we knew the address of `first`. Otherwise we wouldn't know what an address of shellcode is.
