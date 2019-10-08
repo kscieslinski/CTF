@@ -64,6 +64,7 @@ exit(0);
 ```
 
 Not much to play with? Well, `gets` will change everything. Our plan is to:
-[  ] prepare the exploit with `gets`
-[  ] `malloc` call will override the GOT table
-[  ] `exit(0)` instead of calling `exit@libc` will invoke `win` function
+
+[  ]  prepare the exploit with `gets`
+[  ]  `malloc` call will override the GOT table
+[  ]  `exit(0)` instead of calling `exit@libc` will invoke `win` function
