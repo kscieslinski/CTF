@@ -1,7 +1,7 @@
 from pwn import *
 
 # [  prev_size  ][    size    ][     fd    ][    bk    ][     data          ]
-#                              [got.exit-12][  first+8 ][shellcode          ] 
+#                              [got.exit-12][  first+8 ][    shellcode      ] 
 
 
 # Constants
