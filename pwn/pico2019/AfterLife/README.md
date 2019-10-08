@@ -37,9 +37,13 @@ free(first)
 
 ![](img/memory1.png)
 
+The `first` chunk landed in unsorted bin. This is because all small & large chunks land in this bin (there are few exceptions, like when they are close to top chunk they won't).
+
 ```c
 free(third)
 ```
+
+The `third` chunk landed in unsorted bin for the same reason. Note that unsorted bin acts like FIFO.
 
 ![](img/memory2.png)
 
@@ -47,4 +51,19 @@ free(third)
 fifth=malloc(128);
 ```
 
+Now things get a bit more complicated. A program requested 128 bytes of memory. It will first check if small bin for suitable chunk. Small bins are empty, so it will move to unsorted bin. It will go throught the list from the tail to the head (FIFO!) looking for a suitable chunk (best fit). If on the way it will find a chunk belonging to a small/large bin it will move it there. This is why `first` got moved to small bin. 
+
 ![](img/memory3.png)
+
+And in this state we are left with the undermentioned instructions:
+
+```c
+gets(first);
+seventh=malloc(256);
+exit(0);
+```
+
+Not much to play with? Well, `gets` will change everything. Our plan is to:
+[  ] prepare the exploit with `gets`
+[  ] `malloc` call will override the GOT table
+[  ] `exit(0)` instead of calling `exit@libc` will invoke `win` function
