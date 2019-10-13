@@ -3,6 +3,7 @@
 ### Notes
 - source code given
 - binary given
+- glibc 2.27
 
 
 ### Enumeration

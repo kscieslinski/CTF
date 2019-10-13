@@ -213,6 +213,7 @@ Now all we have to do is to call a print-flag function:
 ```gdb
 gdb-peda$ c
 Continuing.
+print-flag
 picoCTF{XXXXXXXXXXXXXXXXX}
 ```
 
