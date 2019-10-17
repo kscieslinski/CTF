@@ -1,4 +1,4 @@
-# Ghost_Diary (pwn, pico, heap-exploitation, use-after-free, malloc_hook)
+# Ghost_Diary (pwn, pico, heap-exploitation, glibc 2.27, use-after-free, malloc_hook)
 
 ### Notes
 - binary given

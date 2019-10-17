@@ -4,7 +4,7 @@
 - source code given: yes
 - binary given: yes
 
-### Enumeration
+## Enumeration
 As in almost every pico binary exploitation task the challenge is to not to find a vulnerable part of code, but to find a way to exploit it. Therefore it is super easy to spot a vulnerable to buffer overflow part of code:
 
 ```c
