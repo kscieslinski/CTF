@@ -5,7 +5,7 @@ Notes:
 
 ## Enumeration
 ### Protections
-As in every task in phoenix all protections are disabled (aslr as well):
+As in every task in phoenix all protections are disabled (so is alsr):
 
 ```bash
 $ checksec format-three
@@ -26,10 +26,10 @@ files/format-three: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamic
 ```
 
 ### Goal
-The goal is obvious, we have to set `changeme` with `0x64457845`.
+The goal is obvious, we have to set `changeme` to `0x64457845`.
 
 ### Vulnerabilities
-The program is vulnerable to format-string. It first reads user input into `buf`:
+The program is vulnerable to format-string attack. It first reads user innput into `buf`:
 
 ```c
 if (read(0, buf, sizeof(buf) - 1) <= 0) {
@@ -47,7 +47,7 @@ bounce(buf);
 ```
 
 ## Exploit
-We will want to overwrite the value under `0x64457845`. Printf let's us write to arbitrary location using `%n` type, which will set the value under provided address to number of bytes written so far:
+We want to overwrite the value under `0x64457845` (changeme). Printf let's us write to arbitrary location using `%n` type, which sets the value under provided address to number of bytes written so far:
 
 ```c
 int x;
@@ -60,15 +60,19 @@ Ok, and what if our program looks like:
 printf("1234%n"); // what will get overwriten?
 ```
 
-Well, `printf` doesn't validate the provided arguments. It just assumes they are valid. And how are arguments passed to functions on x86_64? Well, the first 6 are passed in: rdi, rsi, rdx, rcd, r8, r9 registers and the next ones are passed on stack.
+Well, `printf` doesn't validate the provided arguments. It just assumes they are valid. And how are arguments passed to functions on x86_64? Well, the first 6 arguments are passed respectively in: rdi, rsi, rdx, rcd, r8, r9 registers and the next ones are passed on stack.
 
-So our program will overwrite the address stored under rsi register (as rdi keeps the format argument).
+So our program will overwrite the address stored under rsi register (as rdi already keeps the `format string` argument).
 
+From [printf man](https://linux.die.net/man/3/printf) page:
+```
+int printf(const char *format, ...);
+```
 
 Ok, but how can we make the program to write to address of our choice? In this case the address of `changeme` variable?
-Well, we can use `direct access` parameter which specifies the parameter to use for input. So `printf("1234%8$n")` would overwrite the second (8 - 6) value placed on stack with 0x4. And as our `buf` is also placed on the stack, we can make the program to get the address from the `buf`! And remember, we do control everything inside the `buf`.
+Well, we can use `direct access` parameter which specifies the parameter to use for input. So `printf("1234%8$n")` would overwrite the third (8 - 5) value placed on stack with 0x4. And as our `buf` is also placed on the stack, we can make the program to retrieve the address from the `buf`! And remember, we do control everything inside the `buf`.
 
-That's exactly what we want to achieve! Let's try this out to overwrite the lsb of `changme` variable with 0x45.
+That's exactly what we want! Let's try this technique to overwrite the lsb of `changme` variable with 0x45.
 
 First we have to find the address of `changme`. This can be done easly as binary was not compiled as PIE:
 
@@ -107,7 +111,7 @@ $2 = (void *) 0x7fffffffcd10
 
 So the offset is: 0x7fffffffcd10 - 0x7fffffffcd40 = 48 = 6 * 8
 
-Let's provide `%069x%14$nAAAAAA` + `\x4c\x10\x60\x00\x00\x00\x00\x00` as an input. Note that we had to pad the `format` string with 'A's to align stack address. Moreover we will overwrite the address passed as 13th argument. (14 = 5 + 9)
+Let's provide `%069x%14$nAAAAAA` + `\x4c\x10\x60\x00\x00\x00\x00\x00` as an input. Note that we had to pad the `format` string with 'A's to align stack address. Moreover we will overwrite the address passed as 14th argument. (14 = 5 + 9)
 
 Our stack to look like this:
 
@@ -129,10 +133,10 @@ Welcome, brought to you by https://exploit.education
 0000000000000000000000000000000000000000000000000000000000000ffffcdc0AAAAAAL`Better luck next time - got 0x00000045, wanted 0x64457845!
 ```
 
-Ha, well done! We have overwriten a byte of our choice.
+Ha, well done! We have overwriten a byte of `changeme` variable!
 3 more bytes to go, but we can do them in the same way we done the first one.
 
-The final stack of our exploit should look like:
+This is how the stack should look like just before calling printf in final exploit:
 ![](img/stack1.png)
 
 
