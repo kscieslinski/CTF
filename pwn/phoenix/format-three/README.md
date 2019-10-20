@@ -107,7 +107,7 @@ $2 = (void *) 0x7fffffffcd10
 
 So the offset is: 0x7fffffffcd10 - 0x7fffffffcd40 = 48 = 6 * 8
 
-Let's provide `%069x%14$nAAAAAA` + `\x4c\x10\x60\x00\x00\x00\x00\x00` as an input. Note that we had to pad the `format` string with 'A's to align stack address. Moreover we will overwrite the address passed as 13th argument. (14 = 5 + 6 + 2)
+Let's provide `%069x%14$nAAAAAA` + `\x4c\x10\x60\x00\x00\x00\x00\x00` as an input. Note that we had to pad the `format` string with 'A's to align stack address. Moreover we will overwrite the address passed as 13th argument. (14 = 5 + 9)
 
 Our stack to look like this:
 
@@ -130,6 +130,10 @@ Welcome, brought to you by https://exploit.education
 ```
 
 Ha, well done! We have overwriten a byte of our choice.
+3 more bytes to go, but we can do them in the same way we done the first one.
+
+The final stack of our exploit should look like:
+![](img/stack1.png)
 
 
 ## References
