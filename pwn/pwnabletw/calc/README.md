@@ -356,6 +356,7 @@ Let's see the example. We want to calculate 8+7:
 
 
 To read: 8+7
+
 |calc ram|calc ram|
 |--------|--------|
 |        |        |
