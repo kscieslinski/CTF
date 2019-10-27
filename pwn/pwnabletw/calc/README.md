@@ -359,31 +359,31 @@ To read: 8+7
 
 |calc ram|
 | :-----:|
-|        |
-|        |
-|        |
-|        |
+|    .   |
+|    .   |
+|    .   |
+|    .   |
 |   0    |
 
 |operands|
 | :-----:|
-|        |
-|        |
+|    .   |
+|    .   |
 
 
 To read: +7
 
 |calc ram|
 | :-----:|
-|        |
-|        |
-|        |
+|    .   |
+|    .   |
+|    .   |
 |   8    |
 |   1    |
 
 |operands|
 | :-----:|
-|        |
+|    .   |
 |   +    |
 
 
@@ -391,15 +391,15 @@ To read: 7
 
 |calc ram|
 | :-----:|
-|        |
-|        |
-|        |
+|    .   |
+|    .   |
+|    .   |
 |   8    |
 |   1    |
 
 |operands|
 | :-----:|
-|        |
+|    .   |
 |   +    |
 
 
@@ -407,16 +407,16 @@ To read: '/0'
 
 |calc ram|
 | :-----:|
-|        |
-|        |
-|        |
+|    .   |
+|    .   |
+|    .   |
 |   15   |
 |    1   |
 
 |operands|
 | :-----:|
-|        |
-|        |
+|    .   |
+|    .   |
 
 ## Exploit
 It took me ages to find a starting point. I've spend ages trying to perform buffer overflow by combining addition with multiplication:
@@ -439,14 +439,14 @@ Program starts with reading '+' sign and will place it in operands array:
 
 |calc ram|
 | :-----:|
-|        |
-|        |
-|        |
+|    .   |
+|    .   |
+|    .   |
 |   0    |
 
 |operands|
 | :-----:|
-|        |
+|    .   |
 |   +    |
 
 Then it will read '3', '0' and '0' performing no action other than increasing expr_buf_idx. Finally program will read '\0' and will firstly load 300 inside calc_ram:
@@ -462,14 +462,14 @@ old_expr_buf_idx = expr_buf_idx + 1;
 
 |calc ram|
 | :-----:|
-|        |
-|        |
+|    .   |
+|    .   |
 |  300   |
 |  1     |
 
 |operands|
 | :-----:|
-|        |
+|    .   |
 |   +    |
 
 and then will get inside '/0' case:
@@ -499,29 +499,29 @@ Can you spot what is happening? The developer didn't thought about case when use
 
 |calc ram|
 | :-----:|
-|        |
-|        |
+|    .   |
+|    .   |
 |  300   |
 |  300   |
 
 |operands|
 | :-----:|
-|        |
+|    .   |
 |   +    |
 
 and the next instruction in case will erase operands array. In the end we will be left with:
 
 |calc ram|
 | :-----:|
-|        |
-|        |
+|    .   |
+|    .   |
 |  300   |
 |  300   |
 
 |operands|
 | :-----:|
-|        |
-|        |
+|    .   |
+|    .   |
 
 Ha, that's amazing! Why? Well, we can extend our expression:
 +300+800
@@ -547,6 +547,6 @@ old_expr_buf_idx = expr_buf_idx + 1;
 
 |operands|
 | :-----:|
-|        |
-|        |
+|    .   |
+|    .   |
 
