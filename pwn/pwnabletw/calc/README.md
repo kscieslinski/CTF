@@ -357,15 +357,16 @@ Let's see the example. We want to calculate 8+7:
 
 To read: 8+7
 
-|calc ram|calc ram|
-|--------|--------|
-|        |        |
-|        |        |
-|        |        |
-|        |        |
+|calc ram|    |calc ram|
+|--------|    |--------|
+|        |    |        |
+|        |    |        |
+|        |    |        |
+|        |    |        |
 
 
 To read: +7
+
 |calc ram|    |calc ram|
 |--------|    |--------|
 |        |    |        |
@@ -390,7 +391,6 @@ To read: '/0'
 |        |    |        |
 |   7    |    |        |
 |   8    |    |   +    |
-
 
 To read: 
 |calc ram|    |calc ram|
