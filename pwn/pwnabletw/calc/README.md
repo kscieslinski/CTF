@@ -355,7 +355,7 @@ This is very popular approach to evaluate arithmetic operations. It is called <b
 Let's see the example. We want to calculate 8+7:
 
 |Stack|
--------
+|-----|
 |     |
 |     |
 |     |
