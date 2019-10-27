@@ -364,8 +364,10 @@ To read: 8+7
 |        |
 |        |
 
-operands:
-[ ][ ][ ]
+|operands|
+|--------|
+|        |
+|        |
 
 
 To read: +7
