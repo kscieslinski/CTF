@@ -363,6 +363,7 @@ To read: 8+7
 |        |
 |        |
 |        |
+|   0    |
 
 |operands|
 | :-----:|
@@ -378,6 +379,7 @@ To read: +7
 |        |
 |        |
 |   8    |
+|   1    |
 
 |operands|
 | :-----:|
@@ -393,6 +395,7 @@ To read: 7
 |        |
 |        |
 |   8    |
+|   1    |
 
 |operands|
 | :-----:|
@@ -408,6 +411,7 @@ To read: '/0'
 |        |
 |        |
 |   15   |
+|    1   |
 
 |operands|
 | :-----:|
@@ -415,3 +419,134 @@ To read: '/0'
 |        |
 
 ## Exploit
+It took me ages to find a starting point. I've spend ages trying to perform buffer overflow by combining addition with multiplication:
+`1+1*1+1*1+1*1...`
+
+It would overflow both operations and ram_calc buffers.
+
+```bash
+$ python -c "print '1+1*' * 100 + '1'" | ./calc
+=== Welcome to SECPROG calculator ===
+*** stack smashing detected ***: ./calc terminated
+Aborted
+```
+
+But as mentioned at the begining stack canaries are enabled and so I had to come up with something smarter.
+
+And then it hit me! Instead of overflowing the buffer in standard way, we can gain control over <b>calc_ram_size</b>. How? Look at what happens when we provide +300 as input.
+
+Program starts with reading '+' sign and will place it in operands array:
+
+|calc ram|
+| :-----:|
+|        |
+|        |
+|        |
+|   0    |
+
+|operands|
+| :-----:|
+|        |
+|   +    |
+
+Then it will read '3', '0' and '0' performing no action other than increasing expr_buf_idx. Finally program will read '\0' and will firstly load 300 inside calc_ram:
+
+```c
+[...]
+// store the number in calc_ram
+calc_ram[0] += 1;
+calc_ram[calc_ram[0]] = num;
+old_expr_buf_idx = expr_buf_idx + 1;
+[...]
+```
+
+|calc ram|
+| :-----:|
+|        |
+|        |
+|  300   |
+|  1     |
+
+|operands|
+| :-----:|
+|        |
+|   +    |
+
+and then will get inside '/0' case:
+
+```c
+[...]
+switch (c) {
+    case '\0':
+        eval(calc_ram,operands[operands_idx]);
+        operands_idx -= 1;
+        break;
+}
+```
+
+Where the most important from attacker perspective operation will happen.
+
+```c
+size_t calc_ram_size = calc_ram[0];
+if (operand == '+') {
+    calc_ram[calc_ram_size - 1] += calc_ram[calc_ram_size];
+    calc_ram[0] -= 1;
+} 
+[...]
+```
+
+Can you spot what is happening? The developer didn't thought about case when user would pass '+' as first sign of expression. The eval function expects at least two numbers on calc_ram stack. There is only one number and we will leave eval in such state:
+
+|calc ram|
+| :-----:|
+|        |
+|        |
+|  300   |
+|  300   |
+
+|operands|
+| :-----:|
+|        |
+|   +    |
+
+and the next instruction in case will erase operands array. In the end we will be left with:
+
+|calc ram|
+| :-----:|
+|        |
+|        |
+|  300   |
+|  300   |
+
+|operands|
+| :-----:|
+|        |
+|        |
+
+Ha, that's amazing! Why? Well, we can extend our expression:
++300+800
+
+Reading 800 will result in overwriting an address at offset 301 in calc_ram when placing num in calc_ram.
+
+(again)
+```c
+[...]
+// store the number in calc_ram
+calc_ram[0] += 1;
+calc_ram[calc_ram[0]] = num;
+old_expr_buf_idx = expr_buf_idx + 1;
+[...]
+```
+
+|calc ram|
+| :-----:|
+|  800   |
+|  [...] |
+|  300   |
+|  301   |
+
+|operands|
+| :-----:|
+|        |
+|        |
+
