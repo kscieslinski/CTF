@@ -354,12 +354,49 @@ void eval(int *calc_ram,char operand)
 This is very popular approach to evaluate arithmetic operations. It is called <b>Reverse Polish notation</b>.
 Let's see the example. We want to calculate 8+7:
 
-|Stack|
-|-----|
-|     |
-|     |
-|     |
-|     |
 
+To read: 8+7
+|calc ram|    |calc ram|
+|--------|    |--------|
+|        |    |        |
+|        |    |        |
+|        |    |        |
+|        |    |        |
+
+
+To read: +7
+|calc ram|    |calc ram|
+|--------|    |--------|
+|        |    |        |
+|        |    |        |
+|        |    |        |
+|   8    |    |        |
+
+
+To read: 7
+|calc ram|    |calc ram|
+|--------|    |--------|
+|        |    |        |
+|        |    |        |
+|        |    |        |
+|   8    |    |   +    |
+
+
+To read: '/0'
+|calc ram|    |calc ram|
+|--------|    |--------|
+|        |    |        |
+|        |    |        |
+|   7    |    |        |
+|   8    |    |   +    |
+
+
+To read: 
+|calc ram|    |calc ram|
+|--------|    |--------|
+|        |    |        |
+|        |    |        |
+|        |    |        |
+|   15   |    |        |
 
 ## Exploit
