@@ -338,3 +338,5 @@ Lucly canary is randomized and stack addresses are usually in the lower regions 
 | ...           |
 | 0             |
 |num_count      |
+
+[full exploit](exp.py)
