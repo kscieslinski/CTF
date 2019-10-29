@@ -281,6 +281,7 @@ $ checksec dubblesort
 
 As we can see we have canaries :/ 
 
+## Bypassing canaries
 I've spend hours trying to find a bug in sort algorithm but I couldn't find anything interesting. In the end I gave up and looked at a solution (so no credit for me for solving this challenge). It turns out the vulnerability is in `scanf("%u")` itself and how it treates '+', '-' characters.
 
 Let consider following input:
@@ -305,7 +306,7 @@ Result :
 
 As we can see the num_buf[1] havn't been overwriten. This means that we can just HOP over the canary when performing buffer overflow attack.
 
-The stack layout:
+The stack layout
 
 |Stack          |
 |:-------------:|
@@ -318,4 +319,22 @@ The stack layout:
 |num_buf[7]     |
 |  ...          |
 |num_buf[0]     |
+|num_count      |
+
+## Exploit
+Having libc_base and knowing how to bypass canary we can simply call `system('/bin/sh')` function. We just need to watch out so the sorting algorithm won't mess up our exploit by shifting stack arguments. 
+
+Lucly canary is randomized and stack addresses are usually in the lower regions of the memory (meaning they will be treated as big numbers after converting to unsigned int). We want to have
+
+|Stack          |
+|:-------------:|
+| /bin/sh addr
+|system func    |
+|   libc_base   |
+|    ....       |
+|    libc_base  |
+|canary         |
+| 0             |
+| ...           |
+| 0             |
 |num_count      |
