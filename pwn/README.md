@@ -5,4 +5,4 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
 ## Security classes at Warsaw University
 |     Challenge     |     Tags     |     Notes     |
 |     :---:         |     :---:    |     :---:     |
-|  Game             | .            | .             |
+|  [Game](https://github.com/kscieslinski/CTF/tree/master/pwn/bsk/game)           | integer_overflow            | .             |
