@@ -3,6 +3,6 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
 
 
 ## Security classes at Warsaw University
-|  Challenge      |       Tags                         |   Notes          |
-|:---:            |            :---:                   |    :---:         |
-|  .  | .   | .   |
+|     Challenge     |     Tags     |     Notes     |
+|     :---:         |     :---:    |     :---:     |
+|  Game             | .            | .             |
