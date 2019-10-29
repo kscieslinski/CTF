@@ -84,7 +84,7 @@ So the first step is done!
 - [ ] setting LD_PRELOAD (ex. LD_PRELOAD=$PWD/libc.so)
 
 Now let's patch our elf.
-I've uesd [patchelf](https://nixos.org/patchelf.html) program for it. It allows us to change dynamic linker in raw binary as well as rpath and other cool stuff.
+I've used [patchelf](https://nixos.org/patchelf.html) program for it. It allows us to change dynamic linker in raw binary as well as rpath and other cool stuff.
 
 In our case we only want to change dynamic linker:
 
