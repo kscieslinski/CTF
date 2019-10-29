@@ -48,6 +48,9 @@ is some pointer which let's us bypass ASLR.s
 
 Let's start with trying this path. After all it will be nice to have something to start with!
 
+
+## Setting up env
+
 To do so we have to patch our binary so it uses provided libc. This can be done by:
 - [ ] downloading respective dynamic linker (ex. ld-2.23.so)
 - [ ] patching elf to make it use our dynamic linker
@@ -135,3 +138,24 @@ We can see that the patched binary loaded /home/k/pwnabletw/dubblesort/libc_32.s
 - [x] downloading respective dynamic linker (ex. ld-2.23.so)
 - [x] patching elf to make it use our dynamic linker
 - [x] setting LD_PRELOAD (ex. LD_PRELOAD=$PWD/libc.so)
+
+## Back to leaking libc
+Ok, so having setup the environment we can now try to leak the libc_base address. Let's open the binary and proceed to call to read so we can determinate address of name_buf (should be second argument).
+
+and investigate the initial values stored in our name_buf.
+
+
+```gdb
+$ LD_PRELOAD=$PWD/libc_32.so.6 gdb ./dubblesort
+gef➤ start
+gef➤ ni # till we reach read
+gef➤ context
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── stack ────
+0xffffceb0│+0x0000: 0x00000000	 ← $esp
+0xffffceb4│+0x0004: 0xffffceec  →  0x000030d7
+----------------------------------------
+   0x56555a11 <main+78>        mov    DWORD PTR [esp], 0x0
+ → 0x56555a18 <main+85>        call   0x56555630 <read@plt>
+   ↳  0x56555630 <read@plt+0>     jmp    DWORD PTR [ebx+0xc]
+      0x56555636 <read@plt+6>     push   0x0
+      0x5655563b <read@plt+11>    jmp    0x56555620
