@@ -18,7 +18,7 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
       <th align="center">Notes</th>
     </tr>
     <tr>
-      <td>[Game](https://github.com/kscieslinski/CTF/tree/master/pwn/bsk/game)</td>
+      <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/bsk/game">Game</a></td>
       <td align="center">integer_overflow</td>
       <td align="right">.</td>
     </tr>
