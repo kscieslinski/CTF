@@ -32,13 +32,13 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
     </tr>
     <tr>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/HeapOverflow">HeapOverflow 450 points</a></td>
-        <td></td>
-        <td>.</td>
+        <td>heap-exploitation, heap-overflow, unlink macro, free, GOT</td>
+        <td>explains unlink macro</td>
     </tr>
     <tr>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/GoT">GoT 350 points</a></td>
         <td>global-offset-table</td>
-        <td>.</td>
+        <td>explains GoT</td>
     </tr>    
   </tbody>
 </table>
