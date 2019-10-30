@@ -3,6 +3,34 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
 
 
 
+## Pwnable.tw
+<table>
+  <tbody>
+    <tr>
+        <th align="center">Challenge</th>
+        <th align="center">Tags</th>
+        <th align="center">Notes</th>
+    </tr>
+    <tr>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pwnabletw/dubblesort">dubblesort</a></td>
+        <td>scanf + - vulnerability, buffer overflow, canary bypass</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pwnabletw/calc"></a>calc - 150 pts</td>
+        <td>stack machine, canary bypass</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pwnabletw/orw">owr - 100 pts</a></td>
+        <td>shellcode, prctl</td>
+        <td>explains prctl</td>
+    </tr>
+    
+  </tbody>
+</table>
+
+
 
 ## Exploit Education Phoenix
 <table>
@@ -31,37 +59,37 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
         <th align="center">Notes</th>
     </tr>
     <tr>
-        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/zero_to_hero">zero_to_hero - 500 points</a></td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/zero_to_hero">zero_to_hero - 500 pts</a></td>
         <td>heap exploitation, glibc 2.29, off-by-one, tcache, __free_hook</td>
         <td></td>
     </tr>
     <tr>
-        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/Ghost_Diary">Ghost_Diary - 500 points</a></td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/Ghost_Diary">Ghost_Diary - 500 pts</a></td>
         <td>glibc 2.27, use-after-free, malloc_hook</td>
         <td></td>
     </tr>
     <tr>
-        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/CanaRy">CanaRy - 300 points</a></td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/CanaRy">CanaRy - 300 pts</a></td>
         <td>brute force canary byte by byte, buffer overflow</td>
         <td></td>
     </tr>
     <tr>
-        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/AfterLife">AfterLife - 400 points</a></td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/AfterLife">AfterLife - 400 pts</a></td>
         <td>heap-exploitation, use-after-free, unlink macro, GOT</td>
         <td></td>
     </tr>
     <tr>
-        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/messy-malloc">messy-malloc - 300 points</a></td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/messy-malloc">messy-malloc - 300 pts</a></td>
         <td>heap, unclear-memory</td>
         <td></td>
     </tr>
     <tr>
-        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/HeapOverflow">HeapOverflow - 450 points</a></td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/HeapOverflow">HeapOverflow - 450 pts</a></td>
         <td>heap-exploitation, heap-overflow, unlink macro, free, GOT</td>
         <td>explains unlink macro</td>
     </tr>
     <tr>
-        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/GoT">GoT - 350 points</a></td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/GoT">GoT - 350 pts</a></td>
         <td>global-offset-table</td>
         <td>explains GoT</td>
     </tr>    
