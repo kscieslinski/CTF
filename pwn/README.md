@@ -12,7 +12,7 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
         <th align="center">Notes</th>
     </tr>
     <tr>
-        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pwnabletw/dubblesort">dubblesort</a></td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pwnabletw/dubblesort">dubblesort - 150 pts</a></td>
         <td>scanf + - vulnerability, buffer overflow, canary bypass</td>
         <td></td>
     </tr>
