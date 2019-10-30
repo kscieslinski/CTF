@@ -25,7 +25,7 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
 </table>
 
 
-[comment]: <> ( Table schema:
+<!-- Table schema:
 <table>
   <tbody>
     <tr>
@@ -40,4 +40,4 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
     </tr>
   </tbody>
 </table>
-)
+-->
