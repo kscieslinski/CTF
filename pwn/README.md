@@ -12,7 +12,7 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
     </tr>
     <tr>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/zero_to_hero">zero_to_hero</a></td>
-        <td>heap exploitation, glibc 2.29, off-by-one, tcache, __free_hook</td>
+        <td>`heap exploitation, glibc 2.29, off-by-one, tcache, __free_hook`</td>
         <td>.</td>
     </tr>
     <tr>
