@@ -41,7 +41,7 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
         <th align="center">Notes</th>
     </tr>
     <tr>
-        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/phoenix/format-three"></a>Format Three</td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/phoenix/format-three">Format Three</a></td>
         <td>format-string, set address with qword value</td>
         <td></td>
     </tr>
