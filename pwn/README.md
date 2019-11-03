@@ -12,9 +12,14 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
         <th align="center">Notes</th>
     </tr>
     <tr>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pwnabletw/hacknote">hacknote - 200 pts</a></td>
+        <td>heap-exploitation, use-after-free, glibc 2.23-</td>
+        <td></td>
+    </tr>
+    <tr>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pwnabletw/dubblesort">dubblesort - 150 pts</a></td>
         <td>scanf + - vulnerability, buffer overflow, canary bypass</td>
-        <td></td>
+        <td>patchelf + LD_PRELOAD</td>
     </tr>
     <tr>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pwnabletw/calc">calc - 150 pts</a></td>
@@ -98,7 +103,7 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
 
 
 
-## Security classes at Warsaw University
+## Security classes at University of Warsaw
 <table>
   <tbody>
     <tr>
