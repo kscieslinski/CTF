@@ -300,3 +300,28 @@ Enjoy it !
 ```
 
 Wait? Shouldn't the power be 48 (47 + 1)? It should, let's look what happened:
+
+After 
+```c
+strncat(old_bullet_desc, 48 - old_bullet_desc[48]);
+```
+
+![](img/bullet_desc1.png)
+
+The new description part overflowed and overwrote the stored lenght of old_bullet_desc.
+
+Then the lenghts are calculated.
+
+```c
+new_len = strlen(new_bullet_desc); // 1
+old_len = old_bullet_desc[48]; // 0!!!
+```
+
+And the old_lenght is updated:
+
+```c
+old_bullet_desc[48] = old_len + new_len;
+```
+
+![](img/bullet_desc2.png)
+
