@@ -323,5 +323,6 @@ And the old_lenght is updated:
 old_bullet_desc[48] = old_len + new_len;
 ```
 
-![](img/bullet_desc2.png)
+Leaving the final bullet_desc in such state:
 
+![](img/bullet_desc2.png)
