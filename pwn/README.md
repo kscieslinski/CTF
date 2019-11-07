@@ -12,6 +12,11 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
         <th align="center">Notes</th>
     </tr>
     <tr>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pwnabletw/silver_bullet">Silver Bullet - 200 pts</a></td>
+        <td>buffer overflow, off-by-one</td>
+        <td></td>
+    </tr>
+    <tr>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pwnabletw/hacknote">hacknote - 200 pts</a></td>
         <td>heap-exploitation, use-after-free, glibc 2.23-</td>
         <td></td>
@@ -74,9 +79,9 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
         <td></td>
     </tr>
     <tr>
-        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/CanaRy">CanaRy - 300 pts</a></td>
-        <td>brute force canary byte by byte, buffer overflow</td>
-        <td></td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/HeapOverflow">HeapOverflow - 450 pts</a></td>
+        <td>heap-exploitation, heap-overflow, unlink macro, free, GOT</td>
+        <td>explains unlink macro</td>
     </tr>
     <tr>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/AfterLife">AfterLife - 400 pts</a></td>
@@ -84,20 +89,20 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
         <td></td>
     </tr>
     <tr>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/GoT">GoT - 350 pts</a></td>
+        <td>global-offset-table</td>
+        <td>explains GoT</td>
+    </tr>
+    <tr>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/messy-malloc">messy-malloc - 300 pts</a></td>
         <td>heap, unclear-memory</td>
         <td></td>
     </tr>
     <tr>
-        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/HeapOverflow">HeapOverflow - 450 pts</a></td>
-        <td>heap-exploitation, heap-overflow, unlink macro, free, GOT</td>
-        <td>explains unlink macro</td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/CanaRy">CanaRy - 300 pts</a></td>
+        <td>brute force canary byte by byte, buffer overflow</td>
+        <td></td>
     </tr>
-    <tr>
-        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pico2019/GoT">GoT - 350 pts</a></td>
-        <td>global-offset-table</td>
-        <td>explains GoT</td>
-    </tr>    
   </tbody>
 </table>
 
