@@ -222,7 +222,19 @@ Meaning when we provide as an input `some_description` string the memory layout 
 
 [S][O][M][E][_][D][E][S][C][R][I][P][T][I][O][N][\x00]...[\x00][16]
 
-Still we cannot overflow the buffer and overwrite the length. At least for now, but we have one more function to look at:
+Still we cannot overflow the buffer and overwrite the length. But if we check the binary protections we can see that buffer overflow is a right path as there are no canaries enabled:
+
+```bash
+$ checksec patched
+[*] './patched'
+    Arch:     i386-32-little
+    RELRO:    Full RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+Let's check last function in order to see if we can abuse it somehow:
 
 ```c
 void power_up(char *old_bullet_desc)
@@ -326,3 +338,5 @@ old_bullet_desc[48] = old_len + new_len;
 Leaving the final bullet_desc in such state:
 
 ![](img/bullet_desc2.png)
+
+That's amazing. You know why? Well, we now have buffer overflow as we can overflow a buffer by 47 bytes with power_up function. The DEP protection is enabled so we will want to invoke system function from libc. Unfortunetely we will have to bypass ASLR first.
