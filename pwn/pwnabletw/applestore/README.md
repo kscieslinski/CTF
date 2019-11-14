@@ -327,6 +327,8 @@ Ok, so this simple function first checks if total sum of all items in user's car
 
 So at this place I've spend over 30 minutes staring at the functions and looking for the vulnerabilities. And I couldn't spot any! The user is only asked for indexes when removing/adding item to cart and 'yes'/'no' answer when prompt if he is ok with checking his cart in cart function.
 
+### Poisoned memory
+
 But then I found it. When you see it, it is pretty obvious. The gift_slot in checkout function has been declared on stack, meaning that when function returns back to handler function and latter invokes new function it will be overwriten by new values!
 
 Normaly it would be overwriten by some function arguments, frame registers or old return addresses. But as an attacker we can try to control what will overwrite the gift_slot.
@@ -368,3 +370,48 @@ As stack address is randomized due to ASLR + environment variables they will var
 So if we provide as an answer in cart function: 'NOAAAABBBBCCCCDDDD' we would end with following memory layout:
 
 ![](imgs/stack2.png)
+
+So our gift_slot got completely overwriten, but still belongs to linked list of items in cart!
+
+## Exploit
+Now time to grab a shell! But we need to first bypass ASLR to get libc address. Then we will need to find a way to call system('/bin/sh') as I'm not yet so confident with one_gadget on 32 bits.
+
+### Leaking libc and stack addresss
+Leaking libc is simple. Note that cart() function prints content of a cart.
+
+```c
+int cart(void)
+{
+  [...]
+  printf("Let me check your cart. ok? (y/n) > ");
+  fflush(stdout);
+  my_read(answer_buf,0x15);
+  if (answer_buf[0] == 'y') {
+    puts("==== Cart ====");
+    slot_ptr = myCart.next;
+    while (slot_ptr != (struct slot *)0x0) {
+      printf("%d: %s - $%d\n",idx,slot_ptr->name,slot_ptr->price); // <- here!!!
+      sum = sum + slot_ptr->price;
+      slot_ptr = slot_ptr->next;
+      idx = idx + 1;
+    }
+  }
+  [...]
+}
+```
+
+And as we control gift_slot->name field we can leak puts@libc just by providing got@puts address as name field:
+
+```python3
+# leak libc_base
+fake_chunk = p32(e.got['puts']) + b'XXXX' + p32(0) + p32(0)
+puts_addr = parse_leaked_addr(remove(i2b(27) + fake_chunk))
+log.info('[x] Leaked puts_addr address: ' + hex(puts_addr))
+libc_base = puts_addr - libc.symbols['puts']
+log.info('[x] Calculated libc_base from puts_addr:' + hex(libc_base))
+```
+
+### Leaking stack address
+Now why we can't just overwrite a got address with system function address? This is because unlinking from double linked list do gives us arbitrary write, but it has a side effect! If we want to overwrite address A with address B we would also overwrite address B+12 with address A. And as system function lies in --x segment such write would cause a SIGSEV!
+
+Again it took me a while before I figured out that we can overwrite frame buffer from main function and then two sequential: leave; ret operations (one when leaving handler and second when leaving main) would cause the $esp to point to arbitrary value. This is called stack pivoting. 
