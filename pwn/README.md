@@ -3,6 +3,24 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
 
 
 
+## RITSEC CTF 2019
+<table>
+  <tbody>
+    <tr>
+        <th align="center">Challenge</th>
+        <th align="center">Tags</th>
+        <th align="center">Notes</th>
+    </tr>
+    <tr>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/ritsec/jit-calc">jit-calc - 495 pts</a></td>
+        <td>splitted shellcode</td>
+        <td></td>
+    </tr>
+  </tbody>
+</table>
+
+
+
 ## Pwnable.tw
 <table>
   <tbody>
