@@ -12,6 +12,11 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
         <th align="center">Notes</th>
     </tr>
     <tr>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pwnabletw/applestore">applestore - 200 pts</a></td>
+        <td>stack pivoting, ebp overwrite</td>
+        <td></td>
+    </tr>
+    <tr>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pwnabletw/silver_bullet">Silver Bullet - 200 pts</a></td>
         <td>buffer overflow, off-by-one</td>
         <td></td>
