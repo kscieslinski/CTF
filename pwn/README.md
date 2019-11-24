@@ -1,9 +1,10 @@
 # PWN challenges
-This is a collection of pwn challenges I've solved or partialy solved but wrote writeup in order to better understand the solution. I started learning about low level security on 10.2019. Most of the writeups are made only for myself so that I can track my progress and store some useful tricks. Therefore they might be hard to understand and contain a lot of gramma mistakes.
+This is a collection of pwn challenges I've solved or partialy solved but wrote writeup in order to better understand the solution. I started learning about low level security on 10.2019. Most of the writeups are made only for myself so I can track my progress and store some useful tricks. Therefore they might be hard to understand and contain a lot of gramma mistakes.
 
 
 
 ## RITSEC CTF 2019
+I participated in this CTF myself on a train ride. I've tried and completed two challenges: the easy bottles task and the jit-calc. The later one was really cool one and so I wrote writeup for it.
 <table>
   <tbody>
     <tr>
@@ -71,7 +72,7 @@ This is a collection of pwn challenges I've solved or partialy solved but wrote 
 
 
 ## Exploit Education Phoenix
-My friend recommended this site to me. I do respect that it introduces core concepts about exploitation techniques along with many architectures, althought I did not enjoyed it to much as they lacked a plot :( The nice thing is that I've learned about format string vulnerability here. I've done all challenges except of heap ones as they seemed very similar to the easy ones at picoCTF 2019 (I think final heap one was broken)
+My friend has recommended this site to me. I do respect that it introduces core concepts about exploitation techniques. Moreover I love that it is prepared for many, not only amd architecture. Nevertheless I did not enjoyed it to much as the challenges lacked a plot :( The nice thing is that I've learned about format string vulnerability there. I've done all challenges except of heap exploitation ones as they seemed to be very similar to the easy ones at picoCTF 2019 (plus I think the final heap task had a mistake which made it very hard if not completely unexploitable)
 <table>
   <tbody>
     <tr>
