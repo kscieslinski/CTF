@@ -89,6 +89,7 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
 
 
 ## PicoCTF 2019
+This was my first CTF in which I've tried to solve a pwn challenge. I was super lucky to start learning about low level exploitation a week before this CTF started, so I had much fun competing in a complete new for me category. In the end I've solved all of the challenges except of: sice_cream, zero_to_hero and leap-frog. After the CTF I've fairly completed zero_to_hero task. I was very positively surprised that some of the challenges turned out to be quite demanding - especialy the heap exploitation ones.
 <table>
   <tbody>
     <tr>
