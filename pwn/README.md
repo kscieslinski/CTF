@@ -137,8 +137,8 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
 
 
 ## Security classes at University of Warsaw
-This challenges come from in my opinion best entry level course for low level security in Polish. They introduce shellcodes, ret2libc, rop technique, pwntools framework and protection mechnisms as ASLR/DEP/CANARY.
-You can find them [here](https://www.mimuw.edu.pl/~kdr/bsk/).
+This challenges come from in my opinion best entry level course for low level security in Polish. They introduce shellcodes, ret2libc, rop technique, pwntools framework and protection mechnisms as ASLR/DEP/CANARY. Moreover they are very entertaining both to read and to exploit. I totaly recomend the homework shellcode task in which one have to gain a control over SMTP server ([Archiwum xsmtp](https://www.mimuw.edu.pl/~kdr/bsk/lab7))
+You can find the course [here](https://www.mimuw.edu.pl/~kdr/bsk/).
 <table>
   <tbody>
     <tr>
