@@ -1,5 +1,5 @@
 # PWN challenges
-This is a collection of pwn challenges I've solved (or partialy solved but wrote writeup in order to better understand the solution). I started learning about low level security on 10.2019. Most of the writeups are made only for myself so that I can track my progress and store some useful tricks. Therefore they might be hard to understand and contain a lot of gramma mistakes.
+This is a collection of pwn challenges I've solved or partialy solved but wrote writeup in order to better understand the solution. I started learning about low level security on 10.2019. Most of the writeups are made only for myself so that I can track my progress and store some useful tricks. Therefore they might be hard to understand and contain a lot of gramma mistakes.
 
 
 
