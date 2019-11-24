@@ -71,6 +71,7 @@ This is a collection of pwn challenges I've solved (or partialy solved but wrote
 
 
 ## Exploit Education Phoenix
+My friend recommended this site to me. I do respect that it introduces core concepts about exploitation techniques along with many architectures, althought I did not enjoyed it to much as they lacked a plot :( The nice thing is that I've learned about format string vulnerability here. I've done all challenges except of heap ones as they seemed very similar to the easy ones at picoCTF 2019 (I think final heap one was broken)
 <table>
   <tbody>
     <tr>
