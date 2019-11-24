@@ -72,7 +72,7 @@ I participated in this CTF myself on a train ride. I've tried and completed two 
 
 
 ## Exploit Education Phoenix
-My friend has recommended this site to me. I do respect that it introduces core concepts about exploitation techniques. Moreover I love that it is prepared for many, not only amd architecture. Nevertheless I did not enjoyed it to much as the challenges lacked a plot :( The nice thing is that I've learned about format string vulnerability there. I've done all challenges except of heap exploitation ones as they seemed to be very similar to the easy ones at picoCTF 2019 (plus I think the final heap task had a mistake which made it very hard if not completely unexploitable)
+My friend has recommended this site to me. I do respect that it introduces core concepts about exploitation techniques. Moreover I love that it is prepared for many, not only amd architecture. Nevertheless I did not enjoyed it to much as the challenges lacked a plot :( The nice thing is that I've learned about format string vulnerability there. I've done all challenges except of heap exploitation ones as they seemed to be very similar to the easy ones at picoCTF 2019 (plus I think the final heap task had a mistake that made it very hard if not completely unexploitable). [Link](http://exploit.education/phoenix/)
 <table>
   <tbody>
     <tr>
