@@ -390,7 +390,7 @@ So the next idea that popped into my mind was to jump to `name`. It is a global 
 
 `payload = b'\x90' * 88 + p64(e.symbols['name']) + b'\x90' * 100`
 
-``` console
+```GDB
 $ gdb ./tictactoe
 gef➤  b *0x4016b3 ; break at ret from get_name
 gef➤  r
