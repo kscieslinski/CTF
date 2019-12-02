@@ -384,4 +384,17 @@ Start              End                Offset             Perm Path
 0xffffffffff600000 0xffffffffff601000 0x0000000000000000 r-x [vsyscall]
 ```
 
-Can you see 'x' bit? When present it means that this memory region is executable and we can jump
+Can you see 'x' bit? When present it means that this memory region is executable. So if for example we find a way to jump to the `tmp_buf` which we control, we could place our malicious shellcode there and it will get executed. But the problem is that in all modern systems ASLR is enabled and we don't know the stack address. So we would need a gadget like: `push rsp; ret;`, but I couldn't find such in the binary.
+
+So the next idea that popped into my mind was to jump to `name`. It is a global variable and as binary hasn't been compiled as position independent then we know the exact address of it. The only problem is that we cannot use NULL bytes as it is filled with [3] strncpy. Let's check if we are right and just place some nops and observe the execution flow:
+
+
+`name = b'\x90' * 88 + p64(e.symbols['name']) + b'\x90' * 100`
+
+``` bash
+$ gdb ./tictactoe
+gef➤  b *0x4016b3 ; break at ret from get_name
+gef➤  r
+Breakpoint 2 at 0x401716
+gef➤  x/10gx $rsp
+
