@@ -221,7 +221,6 @@ Let's try to run the app again:
 ```console
 $ ./tictactoe
 [+] TCP server started as 0.0.0.0:8889
-
 ```
 
 Hurray! Now we can connect to our proxy with netcat just as we did before but instead of `pwn-tictactoe.ctfz.one` we specify `127.0.0.1` as host. We can observe the whole flow now, add debug information to server.py file or observe tictactoe server under gdb!
@@ -371,7 +370,7 @@ At this point we can try to exploit a proxy server. We control not only return a
 
 Let's confirm that with vmmap:
 
-```gdb
+```GDB
 gef➤  vmmap
 Start              End                Offset             Perm Path
 0x0000000000400000 0x0000000000405000 0x0000000000000000 r-x /home/k/cz/tictactoe_files/tictactoe
