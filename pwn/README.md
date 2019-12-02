@@ -4,7 +4,7 @@ This is a collection of pwn challenges I've solved or partialy solved but wrote 
 
 
 ## CTFZone 2019
-On 30.11.2019 - 01.12.2019 I've been playing TUCTF with Made in MIM team. I've solved few tasks (leakalicious, vulnmath, ctftp, cute animal company). The challenges were really easy even for me and so I decided to take a look at CTFZone ctf which has been online at the same time. I've picked a tictactoc task. It was really cool challenge! It wasn't hard, but it required writing some assembly code. The plot was super nice as well. I encourage you to try it. You can find all files in files/ folder.
+On 30.11.2019 - 01.12.2019 I've been playing TUCTF with Made in MIM team. I've solved few tasks (leakalicious, vulnmath, ctftp, cute animal company). The challenges were really easy even for me and so I decided to take a look at CTFZone ctf which has been online at the same time. I've picked a tictactoc task. It was really cool challenge! It wasn't hard, but it required writing some assembly code. The plot was super nice as well. I encourage you to try it yourself. You can find all files you need in files/ folder.
 <table>
   <tbody>
     <tr>
