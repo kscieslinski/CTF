@@ -3,6 +3,25 @@ This is a collection of pwn challenges I've solved or partialy solved but wrote 
 
 
 
+## CTFZone 2019
+On 30.11.2019 - 01.12.2019 I've been playing TUCTF with Made in MIM team. I've solved few tasks (leakalicious, vulnmath, ctftp, cute animal company). The challenges were really easy even for me and so I decided to take a look at CTFZone ctf which has been online at the same time. I've picked a tictactoc task. It was really cool challenge! It wasn't hard, but it required writing some assembly code. The plot was super nice as well. I encourage you to try it. You can find all files in files/ folder.
+<table>
+  <tbody>
+    <tr>
+        <th align="center">Challenge</th>
+        <th align="center">Tags</th>
+        <th align="center">Notes</th>
+    </tr>
+    <tr>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/ctfzone2019/tictactoe">tictactoe - 114 pts</a></td>
+        <td>shellcode, proxy server</td>
+        <td></td>
+    </tr>
+  </tbody>
+</table>
+
+
+
 ## RITSEC CTF 2019
 I participated in this CTF myself on a train ride. I've tried and completed two challenges: the easy bottles task and the jit-calc. The later one was really cool one and so I wrote writeup for it.
 <table>
