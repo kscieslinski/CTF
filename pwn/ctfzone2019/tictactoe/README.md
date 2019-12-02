@@ -17,7 +17,7 @@ tictactoe: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically link
 
 Before digging into reverse engineering, let's get some basic idea about how the game works by playing it. From the task description we know it is some kind of tictactoe game. Let's connect to the provided host and port.
 
-```bash
+```console
 $ nc pwn-tictactoe.ctfz.one 8889
 Welcome to tictactoe game! Please, enter your name: Ala
                                                                      
