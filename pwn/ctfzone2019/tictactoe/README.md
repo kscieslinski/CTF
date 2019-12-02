@@ -1,8 +1,5 @@
 # Tictactoe (shellcode, proxy)
 
-Notes:
-- binary for proxy server given
-- source code of python server given
 
 ## Enumeration
 In this task we are given two files:
