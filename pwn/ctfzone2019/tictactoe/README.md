@@ -296,7 +296,7 @@ Welcome to tictactoe game! Please, enter your name: aaaabaaacaaadaaaeaaafaaagaaa
 
 And the application hungs up! Let's check the tictactoe tab:
 
-```bash
+```console
 $ ./tictactoe 
 [+] TCP server started as 0.0.0.0:8889
 Segmentation fault (core dumped)
