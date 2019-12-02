@@ -1,4 +1,4 @@
-# Tictactoe (shellcode, proxy)
+# Tictactoe (shellcode, proxy server)
 
 
 ## Enumeration
