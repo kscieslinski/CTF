@@ -422,5 +422,9 @@ Nice as we do can execute instructions but can you notice that the part after re
 
 Remember the first idea to jump into the stack? We gave up because we couldn't find a right gadget. But now we can combine the two ideas and just use code in `name` buffer as our gadget.
 
+`payload = b'\x54\xc3' + b' ' * 86 + p64(e.symbols['name']) + b'\x48\xb8\x3c...'`
+
 ![](img/shellcode0.png)
+
+
 
