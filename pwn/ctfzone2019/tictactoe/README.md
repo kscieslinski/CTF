@@ -177,3 +177,147 @@ So to get the flag a proxy server has to send GET_FLAG request to server.py. The
 
 Ok, so we know that perhaps we have to pwn tictactoc proxy server and then we have to trick the server into thinking that we won 100 games so it sends the flag to tictactoe which will forward it to us.
 
+## Preparing environment
+Let's then leave a server.py for now and let's look for vulnerabilities inside tictactoe application. The binary is quite large and so let's start with manual fuzzing. We want to see the tictactoe errors as well so let's prepare our environment.
+
+Start the server.py in first tab:
+
+```bash
+$ python3 server.py 
+[+] Server started at 127.0.0.1:9998
+
+```
+
+Then start tictactoe in second tab:
+
+```bash
+$ ./tictactoe
+[-] Error resolving server hostname in send_reg_user()
+$
+```
+
+And we immediately got an error. Let's investigate it using ltrace (which will display all library calls application performs)
+
+```bash
+$ ltrace ./tictactoe
+gethostbyname("task2-tictactoe-backend")                                                                                      = 0
+puts("[-] Error resolving server hostn"...[-] Error resolving server hostname in send_reg_user()
+)                                                                                   = 55
+_exit(7 <no return ...>
++++ exited (status 7) +++
+```
+
+Nice :) The tictactoe needs to get an address of server.py. And it get's it from /etc/hosts file. So just add a new record to your etc/hosts:
+
+```bash
+$ cat vim /etc/hosts
+[...]
+127.0.0.1 task2-tictactoe-backend
+[...]
+```
+
+Let's try to run the app again:
+
+```bash
+$ ./tictactoe
+[+] TCP server started as 0.0.0.0:8889
+
+```
+
+Hurray! Now we can connect to our proxy with netcat just as we did before but instead of `pwn-tictactoe.ctfz.one` we specify `127.0.0.1` as host. We can observe the whole flow now, add debug information to server.py file or observe tictactoe server under gdb!
+
+```bash
+$ nc 127.0.0.1 8889
+Welcome to tictactoe game! Please, enter your name: Ala
+                                                                     
++---+---+---+    Session: 13UELROHTOlckhdkn266yfhNRRSX620m           
+|   |   |   |                                                        
+| X |   |   |     Player: Ala                                        
+|  1|  2|  3|                                                        
+|---+---+---|      Level: 1/100                                      
+|   |   |   |                                                        
+|   |   |   |      Rules: You play with 0s. Now it's your turn.      
+|  4|  5|  6|             Enter number 1-9 to make your move.        
+|---+---+---|             In order to get the flag you need to win   
+|   |   |   |             100 times in a row, buy your enemy is a    
+|   |   |   |             really smart AI. Good luck!                
+|  7|  8|  9|                                                        
++---+---+---+      Enter your move (1-9): 
+```
+
+And in the server.py tab we can see that the tictactoe propagetad the name to server.py which assigned new session to user:
+
+```bash
+$ python3 server.py 
+[+] Server started at 127.0.0.1:9998
+[+] Sending session info: b'01000000313355454c524f48544f6c636b68646b6e3236367966684e525253583632306d' (1, b'13UELROHTOlckhdkn266yfhNRRSX620m')
+```
+
+## Manual fuzzing
+Now we can start fuzzing the tictactoe app! Let's start with providing invalid arguments as move:
+
+```bash
+$ nc 127.0.0.1 8889
+Welcome to tictactoe game! Please, enter your name: Ala
+
+Please, enter only free cell number (1-9):0
+                                                                     
++---+---+---+    Session: ovs64oZiQk1b5SGEEObBQ9N1xRhGKa1T           
+|   |   |   |                                                        
+| X |   |   |     Player: Ala                                        
+|  1|  2|  3|                                                        
+|---+---+---|      Level: 1/100                                      
+|   |   |   |                                                        
+|   |   |   |      Rules: You play with 0s. Now it's your turn.      
+|  4|  5|  6|             Enter number 1-9 to make your move.        
+|---+---+---|             In order to get the flag you need to win   
+|   |   |   |             100 times in a row, buy your enemy is a    
+|   |   |   |             really smart AI. Good luck!                
+|  7|  8|  9|                                                        
++---+---+---+      Enter your move (1-9): 0
+
+Please, enter only free cell number (1-9):10
+
+Please, enter only free cell number (1-9):0 
+
+Please, enter only free cell number (1-9):0
+
+Please, enter only free cell number (1-9):-1
+
+Please, enter only free cell number (1-9):0
+```
+
+No crashes or output in tictactoe tab. This means that the game performs at least some checks for the moves. I've decided to move on and checked the second input which is username.
+
+```bash
+$ nc 127.0.0.1 8889
+Welcome to tictactoe game! Please, enter your name: aaaabaaacaaadaaaeaaafaaagaaahaaaiaaajaaakaaalaaamaaanaaaoaaapaaaqaaaraaasaaataaauaaavaaawaaaxaaayaaazaabbaabcaabdaabeaabfaabgaabhaabiaabjaabkaablaabmaabnaaboaabpaabqaabraabsaabtaabuaabvaabwaabxaabyaabzaacbaaccaacdaaceaacfaacgaachaaciaacjaackaaclaacmaacnaacoaacpaacqaacraacsaactaacuaacvaacwaacxaacyaaczaadbaadcaaddaadeaadfaadgaadhaadiaadjaadkaadlaadmaadnaadoaadpaadqaadraadsaadtaaduaadvaadwaadxaadyaadzaaebaaecaaedaaeeaaefaaegaaehaaeiaaejaaekaaelaaemaaenaaeoaaepaaeqaaeraaesaaetaaeuaaevaaewaaexaaeyaaezaafbaafcaafdaafeaaffaafgaafhaafiaafjaafkaaflaafmaafnaafoaafpaafqaafraafsaaftaafuaafvaafwaafxaafyaafzaagbaagcaagdaageaagfaaggaaghaagiaagjaagkaaglaagmaagnaagoaagpaagqaagraagsaagtaaguaagvaagwaagxaagyaagzaahbaahcaahdaaheaahfaahgaahhaahiaahjaahkaahlaahmaahnaahoaahpaahqaahraahsaahtaahuaahvaahwaahxaahyaah
+```
+
+And the application hungs up! Let's check the tictactoe tab:
+
+```bash
+$ ./tictactoe 
+[+] TCP server started as 0.0.0.0:8889
+Segmentation fault (core dumped)
+
+$ dmesg | tail -1
+[ 1295.699752] traps: tictactoe[3654] general protection ip:4016b3 sp:7fffffffdd78 error:0 in tictactoe[400000+5000]
+```
+
+We just found the most basic buffer overflow! Moreover we havn't seen  "__stack_ch_fail" alert, so the binary perhaps is not well protected.
+We can confirm that by using checksec command:
+
+```bash
+$ checksec tictactoe
+[*] './tictactoe'
+    Arch:     amd64-64-little
+    RELRO:    No RELRO
+    Stack:    No canary found
+    NX:       NX disabled
+    PIE:      No PIE (0x400000)
+    RWX:      Has RWX segments
+```
+
+Even better then I could imagine! Not only there are no stack canaries but also the stack is executable and the binary hasn't been compiles as position independend executable!
+
