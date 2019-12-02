@@ -418,5 +418,9 @@ gef➤  x/100i $rip
    0x4057bf:	add    BYTE PTR [rax],al
 ```
 
-Nice as we do can execute instructions but can you notice that the part after return addres hasn't been copied into the `name` variable? This is because the address of `name` contains NULL byte. This means that we have only 88 bytes and cannot use any NULL bytes for our shellcode. It might be ok if we only need a shell, but as we have to trick server.py to give us a flag it might be not enought.
+Nice as we do can execute instructions but can you notice that the part after return addres hasn't been copied into the `name` variable? This is because the address of `name` contains NULL byte. This means that we have only 88 bytes and cannot use any NULL bytes in our shellcode. It might be ok if we only need to spawn a shell, but as we have to trick server.py to give us a flag it might be not enought.
+
+Remember the first idea to jump into the stack? We gave up because we couldn't find a right gadget. But now we can combine the two ideas and just use code in `name` buffer as our gadget.
+
+![](img/shellcode0.png)
 
