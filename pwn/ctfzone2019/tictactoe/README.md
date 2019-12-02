@@ -327,7 +327,6 @@ There are so many protections disabled that the buffer overflow might be enought
 ```c
 // simplified!
 int get_name(void)
-
 {
   int iVar1;
   size_t hello_buf_len;
@@ -365,5 +364,24 @@ int get_name(void)
 Function get_name:
 - [1] Sends welcome message to user. Notice that we can guess the signature of the send_all function: send_all(int sock, char *buf, size_t count), where count is number of bytes to send.
 - [2] Reads name provided by user. Similar to send_all, recv_all signature is: int recv_all(int socket, char *buf, size_t count), where count is number of bytes to read. So in this case program reads up to 0x800 bytes into 16 bytes buffer. This is exactly the buffer overflow we found before!
-- [3] The tmp_name buffer is copied to name, where name is global variable.
+- [3] The tmp_name buffer is copied to name, where name is a global variable.
 
+## Exploit
+At this point we can try to exploit a proxy server. We control not only return address but also huge stack part (the addresses underneath). If we had a libc address we would simply perform some ROP. Unfortunetely we havn't leaked anything yet and so are gadgets are limited to the ones found in the binary itself. Moreover the shell might not be enought (more about this later) so I decided I would like to make use of disabled NX protection (it marks stack, .bss, .data, etc. memory as not executable).
+
+Let's confirm that with vmmap:
+
+```gdb
+gef➤  vmmap
+Start              End                Offset             Perm Path
+0x0000000000400000 0x0000000000405000 0x0000000000000000 r-x /home/k/cz/tictactoe_files/tictactoe
+0x0000000000405000 0x0000000000406000 0x0000000000005000 rwx /home/k/cz/tictactoe_files/tictactoe
+0x0000000000406000 0x0000000000427000 0x0000000000000000 rwx [heap]
+0x00007ffff77d2000 0x00007ffff77dd000 0x0000000000000000 r-x /lib/x86_64-linux-gnu/libnss_files-2.27.so
+[...]
+0x00007ffff7ffe000 0x00007ffff7fff000 0x0000000000000000 rwx 
+0x00007ffffffde000 0x00007ffffffff000 0x0000000000000000 rwx [stack]
+0xffffffffff600000 0xffffffffff601000 0x0000000000000000 r-x [vsyscall]
+```
+
+Can you see 'x' bit? When present it means that this memory region is executable and we can jump
