@@ -305,7 +305,7 @@ $ dmesg | tail -1
 [ 1295.699752] traps: tictactoe[3654] general protection ip:4016b3 sp:7fffffffdd78 error:0 in tictactoe[400000+5000]
 ```
 
-We just found the most basic buffer overflow! Moreover we havn't seen  "__stack_ch_fail" alert, so the binary perhaps is not well protected.
+We just found the most basic buffer overflow! Moreover we haven't seen  "__stack_ch_fail" alert, so the binary perhaps is not well protected.
 We can confirm that by using checksec command:
 
 ```bash
@@ -319,5 +319,51 @@ $ checksec tictactoe
     RWX:      Has RWX segments
 ```
 
-Even better then I could imagine! Not only there are no stack canaries but also the stack is executable and the binary hasn't been compiles as position independend executable!
+Even better then I could imagine! Not only there are no stack canaries but also the stack is executable and the binary hasn't been compiled as position independend executable!
+
+## Inevestigating buffer overflow
+There are so many protections disabled that the buffer overflow might be enought to fully compromise tictactoe application. Let's take a deeper look at the reconstructed part of code responsible for reading user name:
+
+```c
+// simplified!
+int get_name(void)
+
+{
+  int iVar1;
+  size_t hello_buf_len;
+  char tmp_name [16];
+  char hello_buff [53];
+  int recv_session_count;
+  int sent_count;
+  
+  hello_buff = "Welcome to tictactoe game! Please, enter your name: ";
+  memset(tmp_name, 0x0, 16);
+  hello_buf_len = strlen(hello_buff);
+  iVar1 = send_all(psock,hello_buff,(int)hello_buf_len); // [1]
+  if (iVar1 < 0) {
+    close(psock);
+    puts("[-] Error sending hello message in process_game()");
+    iVar1 = -1;
+  }
+  else {
+    iVar1 = recv_all(psock,tmp_name,0x800); // [2]
+    if (iVar1 < 0) {
+      close(psock);
+      puts("[-] Error receiving name in process_game()");
+      iVar1 = -1;
+    }
+    else {
+      tmp_name[iVar1 + -1] = '\0';
+      strcpy(name,tmp_name); // [3]
+      iVar1 = 0;
+    }
+  }
+  return iVar1;
+}
+```
+
+Function get_name:
+- [1] Sends welcome message to user. Notice that we can guess the signature of the send_all function: send_all(int sock, char *buf, size_t count), where count is number of bytes to send.
+- [2] Reads name provided by user. Similar to send_all, recv_all signature is: int recv_all(int socket, char *buf, size_t count), where count is number of bytes to read. So in this case program reads up to 0x800 bytes into 16 bytes buffer. This is exactly the buffer overflow we found before!
+- [3] The tmp_name buffer is copied to name, where name is global variable.
 
