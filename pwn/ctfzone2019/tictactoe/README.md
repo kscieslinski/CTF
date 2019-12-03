@@ -92,15 +92,15 @@ Welcome to tictactoe game! Please, enter your name: Ala
 It's a lose (or draw may be), start over from first level
 ```
 
-So the game asks a player to provide her/his name and then consecutively asks player for moves. The goal seems to be to own a computer 100 times. It seems impossible as computer starts the game, plays quite well and draws are marked as player loose. I've tried few times and havn't won even once.
+So the game asks a player to provide her/his name and then consecutively asks player for moves. The goal seems to be win with computer 100 times. It seems impossible as computer starts the game, plays quite well and ties are not considered a win. I've tried few times and havne't won even once.
 
 Now let's understand the system architecture. As I've mentioned at the beginning we have two files: server.py and tictactoe. Which file did we connected to? I will spoiler a little bit and show you how the flow of first request looked like.
 
 ![](img/architecture0.png)
 
-The tictactoe is a proxy server. Client cannot directly connect to server.py as he doesn't know the ip address of it and it is protected by firewall (or at least should, I havn't tried this attack vector).
+The tictactoe is a proxy server. Client cannot directly connect to server.py as he doesn't know the ip address of it and it is protected by firewall (or at least should, I haven't tried this attack vector).
 
-Ok, so what's the goal? Should we pwn the tictactoe proxy server or server.py? It is obvious when we start reading the source code of server.py:
+Ok, so what's the goal? Should we pwn the tictactoe proxy server or server.py? It becomes obvious when we start reading the source code of server.py:
 
 ```python
 if __name__ == '__main__':
@@ -146,7 +146,7 @@ class TicTacToeServerHandler(socketserver.BaseRequestHandler):
             msg = "You trying to cheat on me!\n"
         else:
             err = ERROR_NO
-            msg = FLAG
+            msg = FLAG                                     # if he did, then send back a flag
 
         try:
             packer = struct.Struct('<i {}s'.format(len(msg)))
@@ -170,7 +170,7 @@ class TicTacToeServerHandler(socketserver.BaseRequestHandler):
         [...]
 ```
 
-So to get the flag a proxy server has to send GET_FLAG request to server.py. Then server.py will double check if the user really has won the game 100 times. One would ask why the server.py has to check the message from tictactoe server? This is similar strategy to online games where a server tracks only most secure information about player and the ones less important are kept inside client memory. The chances that the player exploits a client are way higher and so the server should not fully trust it.
+So to get the flag a proxy server has to send GET_FLAG request to server.py. Then server.py will double check if the user really has won the game 100 times. One would ask why the server.py has to check the message from tictactoe server? This is similar strategy to online games where a server tracks only most secure information about player and the ones less important are kept on client side. The chances that the player exploits a client are way higher and so the server should not fully trust it.
 
 Ok, so we know that perhaps we have to pwn tictactoc proxy server and then we have to trick the server into thinking that we won 100 games so it sends the flag to tictactoe which will forward it to us.
 
@@ -193,7 +193,7 @@ $ ./tictactoe
 $
 ```
 
-And we immediately got an error. Let's investigate it using ltrace (which will display all library calls application performs)
+We immediately got an error. Let's investigate it using ltrace (which will display all library calls application invokes)
 
 ```console
 $ ltrace ./tictactoe
@@ -218,9 +218,10 @@ Let's try to run the app again:
 ```console
 $ ./tictactoe
 [+] TCP server started as 0.0.0.0:8889
+
 ```
 
-Hurray! Now we can connect to our proxy with netcat just as we did before but instead of `pwn-tictactoe.ctfz.one` we specify `127.0.0.1` as host. We can observe the whole flow now, add debug information to server.py file or observe tictactoe server under gdb!
+Hurray! Now we can connect to our proxy with netcat just as we did before but instead of `pwn-tictactoe.ctfz.one` we specify `127.0.0.1` as host. We can observe the whole flow now, add debug information to server.py file or even run tictactoe server under gdb!
 
 ```console
 $ nc 127.0.0.1 8889
@@ -241,7 +242,7 @@ Welcome to tictactoe game! Please, enter your name: Ala
 +---+---+---+      Enter your move (1-9): 
 ```
 
-And in the server.py tab we can see that the tictactoe propagetad the name to server.py which assigned new session to user:
+And in the server.py tab we can see that the tictactoe propagetad the name to server.py which assigned new session to the user:
 
 ```console
 $ python3 server.py 
@@ -301,7 +302,7 @@ $ dmesg | tail -1
 [ 1295.699752] traps: tictactoe[3654] general protection ip:4016b3 sp:7fffffffdd78 error:0 in tictactoe[400000+5000]
 ```
 
-We just found the most basic buffer overflow! Moreover we haven't seen  "__stack_ch_fail" alert, so the binary perhaps is not well protected.
+We just found the most basic buffer overflow! Moreover we haven't seen  "__stack_chk_failed" alert, so the binary perhaps is not well protected.
 We can confirm that by using checksec command:
 
 ```console
@@ -315,7 +316,7 @@ $ checksec tictactoe
     RWX:      Has RWX segments
 ```
 
-Even better then I could imagine! Not only there are no stack canaries but also the stack is executable and the binary hasn't been compiled as position independend executable!
+Even better then we could imagine! Not only there are no stack canaries but also the stack is set to executable and the binary hasn't been compiled as position independend executable!
 
 ## Inevestigating buffer overflow
 There are so many protections disabled that the buffer overflow might be enought to fully compromise tictactoe application. Let's take a deeper look at the reconstructed part of code responsible for reading user name:
@@ -359,11 +360,11 @@ int get_name(void)
 
 Function get_name:
 - [1] Sends welcome message to user. Notice that we can guess the signature of the send_all function: send_all(int sock, char *buf, size_t count), where count is number of bytes to send.
-- [2] Reads name provided by user. Similar to send_all, recv_all signature is: int recv_all(int socket, char *buf, size_t count), where count is number of bytes to read. So in this case program reads up to 0x800 bytes into 16 bytes buffer. This is exactly the buffer overflow we found before!
+- [2] Reads name provided by user. Similar to send_all, recv_all signature is: int recv_all(int socket, char *buf, size_t count), where count is number of bytes to read. So in this case program reads up to 0x800 bytes into 16 bytes buffer. This is exactly the buffer overflow we found above!
 - [3] The tmp_name buffer is copied to name, where name is a global variable.
 
 ## Exploit
-At this point we can try to exploit a proxy server. We control not only return address but also huge stack part (the addresses underneath). If we had a libc address we would simply perform some ROP. Unfortunetely we havn't leaked anything yet and so are gadgets are limited to the ones found in the binary itself. Moreover the shell might not be enought (more about this later) so I decided I would like to make use of disabled NX protection (it marks stack, .bss, .data, etc. memory as not executable).
+At this point we can try to exploit a proxy server. We control not only return address but also huge stack part (the addresses underneath return address). If we had a libc address we would simply create a ROP. Unfortunetely we haven't leaked anything yet and so our gadgets are limited to the ones found in the tictactoe binary. Moreover the shell might not be enought (more about this later) so I decided I would like to make use of disabled NX protection (when enabled it marks stack, .bss, .data, etc. memory as not executable).
 
 Let's confirm that with vmmap:
 
@@ -380,9 +381,9 @@ Start              End                Offset             Perm Path
 0xffffffffff600000 0xffffffffff601000 0x0000000000000000 r-x [vsyscall]
 ```
 
-Can you see 'x' bit? When present it means that this memory region is executable. So if for example we find a way to jump to the `tmp_buf` which we control, we could place our malicious shellcode there and it will get executed. But the problem is that in all modern systems ASLR is enabled and we don't know the stack address. So we would need a gadget like: `push rsp; ret;`, but I couldn't find such in the binary.
+Can you see 'x' bit? When present it means that this memory region is executable. So if for example we find a way to jump to the `tmp_buf` which we control, we could place our malicious shellcode there and it will get executed. But the problem is that in all modern systems ASLR is enabled and we don't know the stack address. So we would need a gadget like: `push rsp; ret;` to change the flow. Unfortunetely I couldn't find such in the binary.
 
-So the next idea that popped into my mind was to jump to `name`. It is a global variable and as binary hasn't been compiled as position independent then we know the exact address of it. The only problem is that we cannot use NULL bytes as it is filled with [3] strncpy. Let's check if we are right and just place some nops and observe the execution flow:
+So the next idea that popped into my mind was to jump to `name`. It is a global variable and as binary hasn't been compiled as position independent we know the exact address of it. The only problem is that we cannot use NULL bytes as it is filled with [3] strncpy. Let's check if we are right and just place some nops and observe the execution flow:
 
 
 `payload = b'\x90' * 88 + p64(e.symbols['name']) + b'\x90' * 100`
@@ -414,16 +415,17 @@ gef➤  x/100i $rip
    0x4057bf:	add    BYTE PTR [rax],al
 ```
 
-Nice as we do can execute instructions but can you notice that the part after return addres hasn't been copied into the `name` variable? This is because the address of `name` contains NULL byte. This means that we have only 88 bytes and cannot use any NULL bytes in our shellcode. It might be ok if we only need to spawn a shell, but as we have to trick server.py to give us a flag it might be not enought.
+Nice as our _nops_ will get executed. The bad message is that the part after return addres hasn't been copied into the `name` variable. This is because the address of `name` contains NULL byte. This means that we have only 88 bytes and cannot use any NULL bytes in our shellcode. It might be ok if we only need to spawn a shell, but as we have to trick server.py to give us a flag it might not be enought.
 
-Remember the first idea to jump into the stack? We gave up because we couldn't find a right gadget. But now we can combine the two ideas and just use code in `name` buffer as our gadget.
+Remember the first idea to jump back to the stack underneath the return address? We gave up because we couldn't find a right gadget. But now we can combine the two previous ideas and just use code in `name` buffer as our gadget.
 
 `payload = b'\x54\xc3' + b' ' * 86 + p64(e.symbols['name']) + b'\x48\xb8\x3c...'`
 
 ![](img/shellcode0.png)
 
 ## Shellcode
-Ok this way we can create a shellcode of length 0x800 - 96 with null bytes allowed! Now the question is why duplicating file descriptors and then invoking execve("/bin/sh") is not enought to get a flag? Well in fact it is enought, but we still have to simulate a game as a main server does not fully trust tictactoe app (it keeps the number of levels user owned and current board state in ram and asks client only for computer & human moves). So our attack scenario would be to just send "bad" computer moves. And I personally find it easier to use already existing in tictactoe app functions for communicating with main server.
+Ok this way we can create a shellcode of length 1952 (0x800 - 88 - 8) with null bytes allowed! Now the question is why duplicating file descriptors and then invoking execve("/bin/sh") is not enought to get a flag? Well in fact it is enought, but we still have to simulate a game as a main server does not fully trust tictactoe app (it keeps the number of levels user owned and current board state in ram and asks client only for computer & human moves). 
+But what we can do is to just send "bad" computer moves. And I personally find it easier to use already existing in tictactoe app functions for communicating with main server.
 
 ## Fake game
 So we need to create a malicious shellcode which will communicate with main server on our behalf.
