@@ -427,6 +427,7 @@ Remember the first idea to jump back to the stack underneath the return address?
 Ok this way we can create a shellcode of length 1952 (0x800 - 88 - 8) with null bytes allowed! Now the question is why duplicating file descriptors and then invoking execve("/bin/sh") is not enought to get a flag? Well in fact it is enought, but we still have to simulate a game as a main server does not fully trust tictactoe app (it keeps the number of levels user owned and current board state in ram and asks client only for computer & human moves). 
 But what we can do is to just send "bad" computer moves. We will simulate 100 times such game:
 
+```
 Computer: Xs 
 Human: Os
 +---+---+---+    
@@ -470,7 +471,7 @@ Human: Os
 |   | O |   |
 |  7|  8|  9|
 +---+---+---+
-
+```
 
 And I personally find it easier to use already existing in tictactoe app functions for communicating with main server.
 
