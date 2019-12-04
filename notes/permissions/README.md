@@ -1,8 +1,5 @@
 # Permissions
 
-## Basics
-
-
 ## Files
 Everyone is familiar with such view, when listing directory content:
 
@@ -137,14 +134,6 @@ $ unalias ls 2>/dev/null
 $ unset -f ls
 $ unset CLICOLOR
 ```
-
-
-
-Moreover quite often we will hear about 
-
-
-### Sticky bits
-
 
 
 
