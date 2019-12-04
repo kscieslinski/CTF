@@ -30,7 +30,7 @@ iii) alice can read and write to file but she cannot execute it
 ![](img/file.png)
 
 Key for files. </br>
-While read, write and execute are same for owner, group and other:
+Read, write and execute are same for owner, group and other:
 - r: can user read file content
 - w: can user modify the file content
 - x: can user execute file. 
@@ -80,10 +80,34 @@ Sticky bit on normal files is very rarely set. When set on executable file it en
 
 ![](img/directory.png)
 
-Key for directories:
+Key for directories: </br>
+Read, write and execute are same for owner, group and other:
 - r: can user list files within directory
 - w: can user create, rename, or delete files within the directory, and modify the directory's attributes
-- x: can user enter the directory, and access files and directories inside. Moreover can user access file inode (metadata informations such as size). When sticky bit is set it means that that the files within the folder can be modified only by the owners. The example usage is a shared between all users /tmp folder (drwxrwxrwt root root) and sticky bit is set to prevent users from deleting files which are not theirs.
+- x: can user enter the directory, and access files and directories inside. Moreover can user access file inode (metadata informations such as size). 
+
+SUID bit has no effect when set on directory.
+
+When directory has been assigned SGID bit all files created in it will be assigned to an directory group instead to an file creator one:
+
+```console
+$ ls -l
+total 4
+drwxrwsrwx 2 alice alice 4096 gru  4 22:07 folder
+
+$ id
+uid=1002(bob) gid=1002(bob) groups=1002(bob)
+
+$ touch folder/bob_file
+
+$ ls -l folder/
+total 0
+-rw-rw-r-- 1 bob alice 0 gru  4 22:08 bob_file
+```
+
+When sticky bit is set it means that that the files within the folder can be modified only by the owners. The example usage is a shared between all users /tmp folder (drwxrwxrwt root root) and sticky bit is set to prevent users from deleting files which are not theirs.
+
+![](img/warning.png)
 
 Important: directory permissions are more important then file permissions! That's why directory sticky bit is so useful!
 
