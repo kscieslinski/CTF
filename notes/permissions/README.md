@@ -135,9 +135,16 @@ $ unset -f ls
 $ unset CLICOLOR
 ```
 
+## Real, effective, saved
+Sometimes a process needs to escalate or downgrade it's privilages for some time. For example a user process might want to escalate it's privilages to root when running `/bin/sudo` and downgrade it's privilages when running not very secure web server (we don't want someone who would find RCE on our server to get root on our machine!).
+But then the process want's to get it's old privilages back, so they must be saved somewhere and that's why we need both real and effective id!
+
+Real user id defines process REAL id which doesn't change and the effective user id will be changes whenever user needs to upgrade/downgrade his privilages for some period of time.
+
+The things get complicated when a user runs an program with elevated privilages which at some point needs to do some unprivileged work temporarily. Then the value of effective user id has to be saved somewhere and such storage is called saved user id.
 
 
-## Linux tasks
+## Linux processes
 As most relevant informations about a process, it's permissions are also stored inside `task_struct`:
 
 ```c
@@ -194,7 +201,8 @@ struct cred {
 
 
 ## References:
-- [great kernel exploit writing tutorial](https://blog.lexfo.fr/cve-2017-11176-linux-kernel-exploitation-part4.html)
-- [liveoverflow video](https://www.youtube.com/watch?v=Y-4WHf0of6Y)
-- [stack overflow: directory permissions explained](https://unix.stackexchange.com/questions/21251/execute-vs-read-bit-how-do-directory-permissions-in-linux-work)
+- https://blog.lexfo.fr/cve-2017-11176-linux-kernel-exploitation-part4.html
+- https://www.youtube.com/watch?v=Y-4WHf0of6Y
+- https://unix.stackexchange.com/questions/21251/execute-vs-read-bit-how-do-directory-permissions-in-linux-work
 - https://null-byte.wonderhowto.com/how-to/hack-like-pro-finding-potential-suid-sgid-vulnerabilities-linux-unix-systems-0158373/
+- https://stackoverflow.com/questions/32455684/unix-linux-difference-between-real-user-id-effective-user-id-and-saved-user
