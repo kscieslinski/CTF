@@ -27,6 +27,8 @@ ii) all group members can both read and write to file, but they cannot execute i
 iii) alice can read and write to file but she cannot execute it
 
 
+![](img/file.png)
+
 Key for files:
 While read, write and execute are same for owner, group and other:
 - r: can user read file content
