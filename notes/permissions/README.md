@@ -4,7 +4,7 @@
 
 
 ## Files
-When listing files we can see their permissions:
+Everyone is familiar with such view, when listing directory content:
 
 ```console
 $ ls -lh
@@ -13,15 +13,96 @@ drwxrwxr-x 2 alice alice 4,0K gru  4 19:18 folder
 -rw-rw-r-- 1 alice alice 12 gru  4 19:14 text_file.txt
 ```
 
+I will now try to explain how should we read such output.
+
+![](img/rwx.png)
+
+First bit defines file type: '-' stands for normal file, 'd' for a directory, 'f' for fifo, 's' for socket, 'c' for character device and 'b' for block device.
+
+Then we have 3 groups each 4 bits long.
+First group defines owner access, second group members access and last defines everyone's else permissions.
+In the above example:
+i) everyone can read a text_file.txt, but they cannot write to the file or execute it if it would be a binary
+ii) all group members can both read and write to file, but they cannot execute it
+iii) alice can read and write to file but she cannot execute it
+
+
 Key for files:
+While read, write and execute are same for owner, group and other:
 - r: can user read file content
 - w: can user modify the file content
-- x: can user execute file
+- x: can user execute file. 
+
+Moreover if SUID bit is set for executable file it means that when executed it will be always run with privileges of an owner of a file. It is useful in situations when a program has to perform some actions that require high privileges. A standard example is `ping` (or `sudo`, or `passwd`) which has to create raw network socket and so needs root permissions. But as we want every user to be able to use it, ping has to have SUID set.
+
+```console
+$ ls -l /bin/ping
+-rwsr-xr-x 1 root root 64424 cze 28 13:05 /bin/ping
+```
+
+The problem with SUID bit is that one has to very careful when assigning it is a perfect attack vector for someone who wan't to escalate their privileges.
+
+To find all files with SUID set one can use find command:
+
+```console
+$ find / -perm /4000 -user root -type f 2>/dev/null
+/usr/bin/newgrp
+/usr/bin/gpasswd
+/usr/bin/pkexec
+/usr/bin/arping
+/usr/bin/chfn
+/usr/bin/traceroute6.iputils
+/usr/bin/passwd
+/usr/bin/chsh
+/usr/bin/sudo
+[...]
+```
+
+Similary when SGID bit is set for an executable file it means that when executed it's group identifier will be subsituted with an owner's of a file gid.    
+
+
+```console
+$ find / -perm /2000 -user root -type f 2>/dev/null
+/usr/bin/wall
+/usr/bin/mlocate
+/usr/bin/crontab
+/usr/bin/ssh-agent
+/usr/bin/bsd-write
+/usr/bin/chage
+/usr/bin/expiry
+[...]
+```
+
+Sticky bit on normal files is very rarely set. When set on executable file it enforces that the code (.text section) will be cached in swap memory.
+
+
+![](img/directory.png)
 
 Key for directories:
 - r: can user list files within directory
 - w: can user create, rename, or delete files within the directory, and modify the directory's attributes
-- x: can user enter the directory, and access files and directories inside. Moreover can user access file inode (metadata informations such as size)
+- x: can user enter the directory, and access files and directories inside. Moreover can user access file inode (metadata informations such as size). When sticky bit is set it means that that the files within the folder can be modified only by the owners. The example usage is a shared between all users /tmp folder (drwxrwxrwt root root) and sticky bit is set to prevent users from deleting files which are not theirs.
+
+Important: directory permissions are more important then file permissions! That's why directory sticky bit is so useful!
+
+```console
+$ id
+uid=1002(bob) gid=1002(bob) groups=1002(bob)
+
+$ ls -l
+total 4
+drwxrwxrwx 2 alice alice 4096 gru  4 20:16 folder
+
+$ ls -l folder
+total 4
+-rw-rw-r-- 1 alice alice 4 gru  4 20:16 file_inside_folder.txt
+
+$ rm folder/file_inside_folder.txt
+rm: remove write-protected regular file 'folder/file_inside_folder.txt'? y
+
+$ ls -l folder
+total 0
+```
 
 Note:  Because `ls` on default linux requires `x` mode to succeed it might be misleading when testing the directory permissions. It is exmplained [here](https://unix.stackexchange.com/questions/395990/why-cant-i-list-a-directory-with-read-permissions). To list files in directory with only `r` flag set one must disable coloring first:
 
@@ -33,16 +114,10 @@ $ unset CLICOLOR
 
 
 
-
-![](img/rwx_files.png)
-
-First bit defines if it's a file or a directory. Next 3 characters define owner access, next 3 characters define group members access and last 3 characters define everyone else access.
-In the above example:
-i) everyone can read a text_file.txt, but they cannot write to the file or execute it if it would be a binary
-ii) all group members can both read and write to file, but they cannot execute it
-iii) alice can read and write to file but she cannot execute it
-
 Moreover quite often we will hear about 
+
+
+### Sticky bits
 
 
 
@@ -107,3 +182,4 @@ struct cred {
 - [great kernel exploit writing tutorial](https://blog.lexfo.fr/cve-2017-11176-linux-kernel-exploitation-part4.html)
 - [liveoverflow video](https://www.youtube.com/watch?v=Y-4WHf0of6Y)
 - [stack overflow: directory permissions explained](https://unix.stackexchange.com/questions/21251/execute-vs-read-bit-how-do-directory-permissions-in-linux-work)
+- https://null-byte.wonderhowto.com/how-to/hack-like-pro-finding-potential-suid-sgid-vulnerabilities-linux-unix-systems-0158373/
