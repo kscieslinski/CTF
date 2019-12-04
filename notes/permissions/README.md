@@ -29,7 +29,7 @@ iii) alice can read and write to file but she cannot execute it
 
 ![](img/file.png)
 
-Key for files:
+Key for files. </br>
 While read, write and execute are same for owner, group and other:
 - r: can user read file content
 - w: can user modify the file content
