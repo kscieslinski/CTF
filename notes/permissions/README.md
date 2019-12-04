@@ -13,12 +13,26 @@ drwxrwxr-x 2 alice alice 4,0K gru  4 19:18 folder
 -rw-rw-r-- 1 alice alice 12 gru  4 19:14 text_file.txt
 ```
 
-Key:
-- r: read permissions
-- w: write permissions
-- x: execute permissions
-- -: no permissions
-- d: directory
+Key for files:
+- r: can user read file content
+- w: can user modify the file content
+- x: can user execute file
+
+Key for directories:
+- r: can user list files within directory
+- w: can user create, rename, or delete files within the directory, and modify the directory's attributes
+- x: can user enter the directory, and access files and directories inside. Moreover can user access file inode (metadata informations such as size)
+
+Note:  Because `ls` on default linux requires `x` mode to succeed it might be misleading when testing the directory permissions. It is exmplained [here](https://unix.stackexchange.com/questions/395990/why-cant-i-list-a-directory-with-read-permissions). To list files in directory with only `r` flag set one must disable coloring first:
+
+```console
+$ unalias ls 2>/dev/null
+$ unset -f ls
+$ unset CLICOLOR
+```
+
+
+
 
 ![](img/rwx_files.png)
 
@@ -28,7 +42,7 @@ i) everyone can read a text_file.txt, but they cannot write to the file or execu
 ii) all group members can both read and write to file, but they cannot execute it
 iii) alice can read and write to file but she cannot execute it
 
-
+Moreover quite often we will hear about 
 
 
 
@@ -92,3 +106,4 @@ struct cred {
 ## References:
 - [great kernel exploit writing tutorial](https://blog.lexfo.fr/cve-2017-11176-linux-kernel-exploitation-part4.html)
 - [liveoverflow video](https://www.youtube.com/watch?v=Y-4WHf0of6Y)
+- [stack overflow: directory permissions explained](https://unix.stackexchange.com/questions/21251/execute-vs-read-bit-how-do-directory-permissions-in-linux-work)
