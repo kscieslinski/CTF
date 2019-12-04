@@ -10,7 +10,7 @@ Thesese are short notes about different security related subjects I will take du
         <th align="center">Description</th>
     </tr>
     <tr>
-        <td><a href="https://github.com/kscieslinski/CTF/tree/master/notes/permissions"></a>Permissions</td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/notes/permissions">Permissions</a></td>
         <td>Describes permissions in linux.
 </td>
     </tr>
