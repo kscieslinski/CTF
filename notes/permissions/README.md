@@ -4,7 +4,7 @@
 
 
 ## Files
-When listing files we can see it's permissions:
+When listing files we can see their permissions:
 
 ```console
 $ ls -lh
@@ -14,11 +14,11 @@ drwxrwxr-x 2 alice alice 4,0K gru  4 19:18 folder
 ```
 
 Key:
-r: read permissions
-w: write permissions
-x: execute permissions
--: no permissions
-d: directory
+- r: read permissions
+- w: write permissions
+- x: execute permissions
+- -: no permissions
+- d: directory
 
 ![](img/rwx_files.png)
 
