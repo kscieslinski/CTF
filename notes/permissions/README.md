@@ -141,10 +141,10 @@ But then the process want's to get it's old privilages back, so they must be sav
 
 Real user id defines process REAL id which doesn't change and the effective user id will be changes whenever user needs to upgrade/downgrade his privilages for some period of time.
 
-The things get complicated when a user runs an program with elevated privilages which at some point needs to do some unprivileged work temporarily. Then the value of effective user id has to be saved somewhere and such storage is called saved user id.
+Things get complicated when a user runs an program with elevated privilages which at some point needs to do some unprivileged work temporarily. Then the value of effective user id has to be saved somewhere and such storage is called saved user id.
 
 
-## Linux processes
+## Kernel structures & capabilities
 As most relevant informations about a process, it's permissions are also stored inside `task_struct`:
 
 ```c
@@ -190,10 +190,25 @@ struct cred {
 };
 ```
 
+In kernel more important than eid are [capabilities](http://man7.org/linux/man-pages/man7/capabilities.7.html). Before kernel 2.2 linux has only checked if process eid is equal to superuser (0). But then it introduced capabilities (per-thread attribute).
+Capabilities can be for example:
 
+CAP_SYS_CHROOT: 
+	* Use chroot(2);
+    * change mount namespaces using setns(2).
 
+And in linux implementation of chroot syscall we can observe how the permissions are being checked using `capable` function:
 
-
+```c
+SYSCALL_DEFINE1(chroot, const char __user *, filename)
+{
+	[...]
+    error = -EPERM;
+    if (!capable(CAP_SYS_CHROOT))
+        goto dput_and_out;
+	[...]
+}
+```
 
 
 
@@ -201,7 +216,8 @@ struct cred {
 
 
 ## References:
-- https://blog.lexfo.fr/cve-2017-11176-linux-kernel-exploitation-part4.html
+- http://man7.org/linux/man-pages/man7/capabilities.7.html
+- https://blog.lexfo.fr/cve-2017-11176-linux-kernel-exploitation-part4.html (part about kernel is just copy pasted)
 - https://www.youtube.com/watch?v=Y-4WHf0of6Y
 - https://unix.stackexchange.com/questions/21251/execute-vs-read-bit-how-do-directory-permissions-in-linux-work
 - https://null-byte.wonderhowto.com/how-to/hack-like-pro-finding-potential-suid-sgid-vulnerabilities-linux-unix-systems-0158373/

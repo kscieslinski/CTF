@@ -43,7 +43,7 @@ I participated in this CTF myself on a train ride. I've tried and completed two 
 
 ## Pwnable.tw
 Great site! During week time between challenges I try to solve the tasks one by one. Site is stable, correct version of libc is 
-always provided and there is always an admin which will answer your questions! I'm not going to write a writeup for every challenge, but
+always provided and there is always an admin who will answer your questions! I'm not going to write a writeup for every challenge, but
 here are some of them. Besides the one listed below I've solved: start, Tcache Tear, Death Note, BabyStack and Spirited Away.
 <table>
   <tbody>
