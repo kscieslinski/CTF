@@ -194,8 +194,8 @@ In kernel more important than eid are [capabilities](http://man7.org/linux/man-p
 Capabilities can be for example:
 
 CAP_SYS_CHROOT: 
-	* Use chroot(2);
-    * change mount namespaces using setns(2).
+- Use chroot(2);
+- change mount namespaces using setns(2).
 
 And in linux implementation of chroot syscall we can observe how the permissions are being checked using `capable` function:
 
