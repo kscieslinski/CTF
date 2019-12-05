@@ -193,9 +193,11 @@ struct cred {
 In kernel more important than eid are [capabilities](http://man7.org/linux/man-pages/man7/capabilities.7.html). Before kernel 2.2 linux has only checked if process eid is equal to superuser (0). But then it introduced capabilities (per-thread attribute).
 Capabilities can be for example:
 
+```
 CAP_SYS_CHROOT: 
 - Use chroot(2);
 - change mount namespaces using setns(2).
+```
 
 And in linux implementation of chroot syscall we can observe how the permissions are being checked using `capable` function:
 
