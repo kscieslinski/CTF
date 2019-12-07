@@ -457,10 +457,132 @@ We also saw that when trying to perform read operation we got a kernel panic mes
 
 So in our case we can read our kernel panic as:
 "Kernel tried to read a page that could not be found".
+Besides that we have all registers states and call trace.
 
+But let's not be guessing to much and let's open `client_kernel_baby_2` under Ghidra. We want to check what caused a kernel panic.
 
+We start with reconstructing main:
 
+```c
+int main()
+{
+  int fd;
+  uint *puVar1;
+  ulong cmd;
+  
+  fd = open("/dev/flux_baby_2" ,0); // [0]
+  do {
+    menu();
+    cmd = read_num(); // [1]
+    switch(cmd) {
+    default:
+      puts("Did not understand your input...");
+      return 0;
+    case 1:
+      do_read(fd); // [2]
+      break;
+    case 2:
+      do_write(fd);
+      break;
+    case 3:
+      system("id");
+      break;
+    case 4:
+      do_readfile();
+      break;
+    case 5:
+      do_hint();
+      break;
+    case 6:
+      close(fd);
+      puts("Bye!");
+      return 0;
+    }
+  } while( true );
+}
+```
 
+The program:
+- [0] starts with opening a `/dev/flux_baby_2` char device
+- [1] reads user command
+- [2] in our case it executes do_read(fd)
+
+So let's check `do_read`:
+
+```c
+void do_read(int fd) {
+  void* read_to;
+  void *read_from_addr;
+  
+  read_to = 0xdeadbeefdeadbeef;
+  
+  puts("I need an address to read from. Choose wisely\n> ");
+  read_from_addr = read_num();
+  
+  puts("Got everything I need. Let\'s do it!");
+  ioctl_read(fd,read_from_addr,&read_to);
+  
+  printf("We\'re back. Our scouter says the power level is: %016lx\n",read_to);
+  
+  return;
+}
+```
+
+it is very simple. It asks user for an address he wants to read from and ivokes ioctl_read():
+
+```c
+#define READ_CMD 0x385
+
+struct read_arg_t {
+  void* from;
+  void* to;
+};
+
+void ioctl_read(int fd, void *read_from_addr, void *read_to) {
+  struct read_arg_t read_arg;
+  read_arg->from = read_from_addr;
+  read_arg->to = read_to;
+
+  ioctl(fd, READ_CMD, &read_arg);
+}
+```
+
+Ok, so all `client_kernel_baby_2` did was to retrieve an address a user wants to read from and then invoked `ioctl` on `/dev/flux_baby_2`.
+The second argument to ioctl is a cmd. The convension is that ioctl is just a switch based on required cmd argument. 
+
+Now let's open `kernel_baby_2` in Ghidra to follow the flow:
+
+```c
+#define READ_CMD 0x385
+#define WRITE_CMD 0x386
+
+struct read_arg_t {
+  void* from;
+  void* to;
+};
+
+struct write_arg_t {
+  void* ptr;
+  void* val;
+};
+
+long driver_ioctl(struct file *flip_1, ulong cmd, ulong arg) {
+  void *dst;
+  
+  printk("flux_baby_2 ioctl nr %d called\n", cmd);
+  if (cmd == READ_CMD) {
+    dread((struct read_arg_t *) arg);
+  }
+  else {
+    if ((int)cmd == WRITE_CMD) {
+      dwrite((struct write_arg_t*) arg);
+    }
+  }
+  return 0;
+}
+```
+
+So what 
 
 
 ## References
