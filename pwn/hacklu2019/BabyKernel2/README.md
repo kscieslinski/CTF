@@ -567,22 +567,44 @@ struct write_arg_t {
 };
 
 long driver_ioctl(struct file *flip_1, ulong cmd, ulong arg) {
-  void *dst;
-  
   printk("flux_baby_2 ioctl nr %d called\n", cmd);
-  if (cmd == READ_CMD) {
-    dread((struct read_arg_t *) arg);
-  }
-  else {
-    if ((int)cmd == WRITE_CMD) {
+
+  switch (cmd) {
+    case READ_CMD:
+      dread((struct read_arg_t*) arg);
+      break;
+
+    case WRITE_CMD:
       dwrite((struct write_arg_t*) arg);
-    }
+      break;
   }
+
   return 0;
 }
 ```
 
-So what 
+So as I've mentioned above, the ioctl is a one big switch depending on a cmd. The arg argument is usually a pointer to other arguents. In case of READ_CMD it is a `struct read_arg_t *` and in case of WRITE_CMD is is a `struct write_arg_t *`.
+
+As we are still trying to understand why kernel panic occured, we need to check `dread` function:
+
+```c
+ssize_t dread(struct read_arg_t *read_arg) {
+  struct read_arg_t read_arg_kernel;
+  unsigned long val;
+  
+  _copy_from_user(&read_arg_kernel, read_arg, sizeof(struct read_arg_kernel)); // [0]
+
+  val = *(unsigned long) read_arg_kernel.from; // [1]
+
+  _copy_to_user(read_arg_kernel.to, &val, sizeof(val)); // [2]
+
+  return 0;
+}
+```
+
+copy_from_user and copy_to_user are standard kernel functions. When you are writing kernel code you must not access user data directly at it could lead to serious security issues. So in [0] kernel just copies the user argument to his own local variable `read_arg_kernel`. Then in [1] kernel reads a value under address a user specified and finaly in [2] he copies this value back to userspace.
+
+As we have provided value 0 the kernel tried in [1] to read a value under this address and of course this is an invalid instruction which caused kernel panic.
 
 
 ## References
