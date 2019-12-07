@@ -754,6 +754,8 @@ fail:
 }
 ```
 
+Now the question is. What can we do having arbitrary read and write? We still do not control $rip, but do we have to? No. As you can read in [here](https://github.com/kscieslinski/CTF/tree/master/notes/permissions#kernel-structures--capabilities) kernel allocated struct task_struct for each process. This structure keeps most relevant informations about a process. One of the informations is a pointer to `cred` structure. In the `cred` structure we have field such as: `uid`, `guid`, `suid`, `sgid` etc. We all know that root has all those fields set to 0, and our unprivilaged user has them set to 1000. So what we can actually do is to set them to 0. All we need to get is an address of those fields!
+
 
 
 
