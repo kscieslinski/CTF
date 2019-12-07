@@ -18,7 +18,7 @@ $ ls public/
 bzImage  initramfs.cpio.gz  run.sh  System.map  vmlinux
 ```
 
-As this is my first kernel challenge, I will briefly describe what are all of those files for (note: as this is my first challenge I might be completely wrong).
+As this is my first kernel challenge, I will briefly describe what are all of those files for. Nnote: as this is my first challenge I might be completely wrong. I will also put some exclamation marks, but this is not because I'm so experienced, but because there is so much new stuff that I have to priorotize it.
 
 Let's start with `bzImage` and `vmlinux`:
 
@@ -66,7 +66,7 @@ ffffffff810003b0 T __startup_secondary_64
 Note: System.map can be found inside /boot/System.map-$(uname -r).
 
 
-Then we have `initramfs.cpio.gz`. It contains packed filesystem. We will find there often `flag` file and source or at least executables of vulnerable `modules`.
+Then we have `initramfs.cpio.gz`. It contains packed filesystem. We will find there often `flag` file and source or at least binaries of vulnerable `modules`.
 
 Let's check what's inside of provided initramfs.cpio.gz by extracting it:
 
@@ -106,7 +106,7 @@ bin  client_kernel_baby_2  etc  flag  home  init  lib  proc  root  sys  usr  var
 
 See? A proper filesystem! Except of well known folders like /etc, /home we can directly spot `flag`, `init`, `lib/modules/4.19.77/kernel_baby_2.ko` and `client_kernel_baby_2` binaries. We will speak about them in a bit. For now just note that you should alwJustays look inside `initramfs.cpio.gz`!
 
-Now we are left with `run.sh` script:
+Let's move to `run.sh` script:
 
 ```bash
 DIR="$(dirname "$(readlink -f "$0")")"
@@ -133,8 +133,134 @@ Finally we have:
 - `-append "console=ttyS0 init='/init'"`
 option which tells qemu to open console and run `init` file.
 
-I bet this is a lot (it was for me), and so for now you should only be looking for keywords such as: smep, smap, kaslr. This are the protections and so our attack technique will depend on whether they are enabled or disabled.
-Here we have smep and smap enabled and no kaslr. I will explain them later on when we get to exploit phrase.
+I bet this is a lot for you (it was for me), and so for now you should only be looking for keywords such as: smep, smap, kaslr. This are the software and hardware protections and so our attack technique will depend on whether they are enabled or disabled.
+Here we have smep and smap enabled and kaslr is disabled. I will explain them later on when we reach exploit phase.
+
+We are left with last, `init` script which we found in extracted `initramfs.cpio.gz`. I really don't want to overhelm you so I will only focus on most important parts.
+
+```
+#!/bin/busybox sh
+# /bin/sysinfo
+
+/bin/busybox --install /bin
+/bin/mkdir /sbin
+/bin/busybox --install /sbin
+
+export PATH="/bin;$PATH"
+export LD_LIBRARY_PATH="/lib"
+
+mkdir -p /dev /sys /proc /tmp
+
+mount -t devtmpfs none /dev
+mount -t sysfs sys /sys
+mount -t proc proc /proc
+mount -t tmpfs none /tmp
+
+# chown
+chown -R 0:0  /bin /etc /home /init /lib /root /tmp /var
+chown -R 1000:1000 /home/user
+chown 0:0 / /dev /proc /sys
+chown 0:0 /flag
+
+# chmod
+chmod -R 700 /etc /home /root /var
+chmod -R 755 /bin /init /lib
+chmod -R 1777 /tmp
+chmod 755 /
+chmod 755 /etc
+chmod 744 /etc/passwd /etc/group
+chmod 755 /home
+chmod 700 /etc/shadow
+
+chmod 700 /flag
+
+mkdir -p /lib/modules/$(uname -r)
+
+insmod "/lib/modules/$(uname -r)/kernel_baby_2.ko"
+chmod +rw /dev/flux_baby_2
+chmod +x /client_kernel_baby_2
+
+sleep 2
+
+su user -c /client_kernel_baby_2
+
+# /bin/sh
+
+poweroff -f -n -d 0
+```
+
+This script is run just after linux boots. It runs with root privilages. It creates two users (a root user: root and a normal unprivilage user: user), then sets permissions (chmod, chown) to files (ex. so that only root can read /flag).
+
+### Modules
+Then there is perhaps a new instruction for you called insmod:
+
+```bash
+insmod "/lib/modules/$(uname -r)/kernel_baby_2.ko"
+chmod +rw /dev/flux_baby_2
+chmod +x /client_kernel_baby_2
+```
+
+Before I explain above instructions this is a right place to understand how (at least not advanced) kernel exploitation challenges are build. It might be confusing that we are exploiting a linux kernel but does it means that someone want's us to find a 0day? NO. Most challenges focus on exploiting modules. Linux supports adding your own chunk of code that can use kernel functions and globals but doesn't require kernel recompilation or reboot. The modules run inside kernel and so pose a great attack target for hackers.
+
+A simple hello world module can look like:
+
+```c
+// hello.c
+#include <linux/module.h>
+#include <linux/kernel.h>
+
+int init_module(void) {
+	printk(KERN_INFO "Hello world\n");
+	return 0;
+}
+
+void cleanup_module(void) {
+	printk(KERN_INFO "Goodbye world\n");
+}
+
+module_init(init_module);
+module_exit(cleanup_module);
+```
+
+all it has to have is a constructor `init_module` and destructor `cleanup_module`. Then you specify which function is a constructor and which is a destructor with filling `module_init` and `module_exit` macros.
+
+You compile module with simple Kbuild:
+
+```makefile
+# Makefile
+obj-m += hello.o
+
+all:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+
+clean:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+``` 
+
+using make command and load it using `insmod` command. To remove it you use `rmmod` command.
+
+```console
+# make
+...
+# insmod hello.ko
+# dmesg
+Hello world
+# rmmod hello.ko
+# dmesg
+Hello world
+Goodbye world
+```
+
+How can you communicate with module from code? Well, they usually come with char devices. They are placed in /dev folder.
+
+## 
+In this challenge we found 3 files inside initramfs.cpio.gz:
+- lib/modules/4.19.77/kernel_baby_2.ko: kernel module binary. This file perhaps contains the vulnerability and in the end we will have to exploit it. It runs inside kernel so when exploited we can gain privilages escalation :)
+- /dev/flux_baby_2: a char device used to communicate with the module. Standard functions to communicate with it are: `open`, `close`, `read`, `write`, `llseek`, `ioctl`.
+- client_kernel_baby_2: in this specific challenge we cannot communicate with a char device as a user (chown 0:0 /dev in init file). But we can run ./client_kernel_baby_2 program which just wraps the `open`, `close`, ..., `ioctl` functions and invokes them on `/dev/flux_baby_2`. This means that our exploit will just communicate with this binary.
 
 
 ## References
+- https://www.tldp.org/LDP/lkmpg/2.6/html/x181.html
+- https://blog.lexfo.fr/cve-2017-11176-linux-kernel-exploitation-part1.html
+- http://eternal.red/2019/sloppy-dev-writeup/
