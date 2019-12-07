@@ -1,7 +1,6 @@
 # Baby Kernel 2 (kernel, +smep, +smap, -kaslr)
 
-## Enumeration
-### Understanding what we are given
+## Understanding what we are given
 In this challenge we are given standard linux kernel CTF challenge setup:
 
 ```console
@@ -251,13 +250,217 @@ Hello world
 Goodbye world
 ```
 
-How can you communicate with module from code? Well, they usually come with char devices. They are placed in /dev folder.
+How can you communicate with module from code? Well, they usually come with char devices. They are placed inside /dev folder.
 
-## 
+## Challenge itself
 In this challenge we found 3 files inside initramfs.cpio.gz:
 - lib/modules/4.19.77/kernel_baby_2.ko: kernel module binary. This file perhaps contains the vulnerability and in the end we will have to exploit it. It runs inside kernel so when exploited we can gain privilages escalation :)
 - /dev/flux_baby_2: a char device used to communicate with the module. Standard functions to communicate with it are: `open`, `close`, `read`, `write`, `llseek`, `ioctl`.
 - client_kernel_baby_2: in this specific challenge we cannot communicate with a char device as a user (chown 0:0 /dev in init file). But we can run ./client_kernel_baby_2 program which just wraps the `open`, `close`, ..., `ioctl` functions and invokes them on `/dev/flux_baby_2`. This means that our exploit will just communicate with this binary.
+
+So we have two files to reverse engineer: `client_kernel_baby_2` and `kernel_baby_2.ko`. 
+
+When running `./run.sh` the `client_kernel_baby_2` program will be run in the console right after kernel boots. 
+
+```console
+$ ./run.sh 
+Linux version 4.19.77 (sceptic@sceptic-arch) (gcc version 9.2.0 (GCC)) #2 PREEMPT Fri Oct 11 00:50:19 CEST 2019
+Command line: console=ttyS0 init='/init'
+x86/fpu: Supporting XSAVE feature 0x001: 'x87 floating point registers'
+x86/fpu: Supporting XSAVE feature 0x002: 'SSE registers'
+[...]
+clocksource: tsc: mask: 0xffffffffffffffff max_cycles: 0x19f2010fc46, max_idle_ns: 440795276803 ns
+clocksource: Switched to clocksource tsc
+flux_baby_2 opened
+----- Menu -----
+1. Read
+2. Write
+3. Show me my uid
+4. Read file
+5. Any hintz?
+6. Bye!
+> 
+```
+
+This is because of the `su user -c /client_kernel_baby_2` placed at the end of `init` file. As I prefer to have more control I started with commenting this line and uncommenting shell: /bin/bash.
+
+```console
+$ cat init | tail -8
+
+sleep 2
+
+# su user -c /client_kernel_baby_2
+
+/bin/sh
+
+poweroff -f -n -d 0
+```
+
+Now we have to pack our updated initramfs.cpio.gz. We can do this by using this command:
+
+```console
+$ cd extracted
+
+$ find . -print0 | cpio --null -ov --format=newc | gzip -9 >../initramfs.cpio.gz
+.
+./initramfs.cpio.gz
+./extracted
+[...]
+./bzImage
+./System.map
+./run.sh
+155123 blocks
+```
+
+And let's run ./run.sh again:
+
+```console
+$ ./run.sh
+Linux version 4.19.77 (sceptic@sceptic-arch) (gcc version 9.2.0 (GCC)) #2 PREEMPT Fri Oct 11 00:50:19 CEST 2019
+Command line: console=ttyS0 init='/init'
+[...]
+/bin/sh: can't access tty; job control turned off
+/ # id
+uid=0(root) gid=0(root)
+```
+
+Oh, we are root as well! Well yes, baceuse init script runs with root privilages. Of course this won't be possible on challenge server where we cannot modify `./run.sh` file. But it is a good idea to modify init localy and log in as root as we gain access to useful debugging stuff like: dmesg, /proc/kallsyms, etc.
+
+Before we run ./client_kernel_baby_2 let's downgrade our permissions for a moment to become user.
+Now let's run ./client_kernel_baby_2:
+
+```console
+# su user
+$ id
+uid=1000(user) gid=1000(user) groups=1000(user)
+
+$ ./client_kernel_baby_2
+flux_baby_2 opened
+----- Menu -----
+1. Read
+2. Write
+3. Show me my uid
+4. Read file
+5. Any hintz?
+6. Bye!
+> 4
+Which file are we trying to read?
+> /etc/passwd
+Here are your 0x47 bytes contents: 
+root:x:0:0:root:/root:/bin/sh
+user:x:1000:1000:user:/home/user:/bin/sh
+----- Menu -----
+1. Read
+2. Write
+3. Show me my uid
+4. Read file
+5. Any hintz?
+6. Bye!
+> 4
+> /flag
+Could not open file for reading...
+----- Menu -----
+1. Read
+2. Write
+3. Show me my uid
+4. Read file
+5. Any hintz?
+6. Bye!
+> 3
+uid=1000(user) gid=1000(user) groups=1000(user)
+----- Menu -----
+1. Read
+2. Write
+3. Show me my uid
+4. Read file
+5. Any hintz?
+6. Bye!
+> 1
+I need an address to read from. Choose wisely
+> 
+0
+Got everything I need. Let's do it!
+flux_baby_2 ioctl nr 901 called
+BUG: unable to handle kernel NULL pointer dereference at 0000000000000000
+PGD 33c3067 P4D 33c3067 PUD 33c2067 PMD 0 
+Oops: 0000 [#1] PREEMPT NOPTI
+CPU: 0 PID: 62 Comm: client_kernel_b Tainted: G           O      4.19.77 #2
+RIP: 0010:read+0x2a/0x40 [kernel_baby_2]
+Code: 55 48 89 fe ba 10 00 00 00 48 89 e5 48 83 ec 18 48 8d 7d f0 e8 07 64 11 e1 48 8b 45 f0 48 8b 7d f8 48 8d 75 e8 ba 08 00 00 00 <48> 8b 00 48 89 45 e8 e8 ba 63 11 e1 31 c0 c9 c3 66 0f 1f 44 00 00
+RSP: 0018:ffffc900000c7e18 EFLAGS: 00000246
+RAX: 0000000000000000 RBX: 0000000000000385 RCX: 0000000000000000
+RDX: 0000000000000008 RSI: ffffc900000c7e18 RDI: 00007fff7ebc06b8
+RBP: ffffc900000c7e30 R08: 00007fff7ebc06b8 R09: 00000000000000da
+R10: 0000000000000007 R11: 0000000000000000 R12: 00007fff7ebc0670
+R13: ffff88800349bc00 R14: 00007fff7ebc0670 R15: ffff88800338c400
+FS:  0000000001ac2880(0000) GS:ffffffff81836000(0000) knlGS:0000000000000000
+CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+CR2: 0000000000000000 CR3: 00000000033c0000 CR4: 00000000005406b0
+PKRU: 55555554
+Call Trace:
+ driver_ioctl+0x52/0xf2e [kernel_baby_2]
+ do_vfs_ioctl+0x414/0x620
+ ksys_ioctl+0x3c/0x80
+ ? ksys_write+0x4a/0xc0
+ __x64_sys_ioctl+0x15/0x20
+ do_syscall_64+0x44/0x1c0
+ entry_SYSCALL_64_after_hwframe+0x44/0xa9
+RIP: 0033:0x4502eb
+Code: 0f 97 c0 84 c0 75 b0 49 8d 3c 1c e8 1f 4c 03 00 85 c0 78 b1 48 83 c4 08 4c 89 e0 5b 41 5c c3 f3 0f 1e fa b8 10 00 00 00 0f 05 <48> 3d 01 f0 ff ff 73 01 c3 48 c7 c1 c0 ff ff ff f7 d8 64 89 01 48
+RSP: 002b:00007fff7ebc0648 EFLAGS: 00000246 ORIG_RAX: 0000000000000010
+RAX: ffffffffffffffda RBX: 00000000004004a0 RCX: 00000000004502eb
+RDX: 00007fff7ebc0670 RSI: 0000000000000385 RDI: 0000000000000003
+RBP: 00007fff7ebc0690 R08: 0000000000000024 R09: 7265766520746f47
+R10: 4920676e69687479 R11: 0000000000000246 R12: 00000000004032b0
+R13: 0000000000000000 R14: 00000000004ca018 R15: 0000000000000000
+Modules linked in: kernel_baby_2(O)
+CR2: 0000000000000000
+---[ end trace db070858655dba27 ]---
+RIP: 0010:read+0x2a/0x40 [kernel_baby_2]
+Code: 55 48 89 fe ba 10 00 00 00 48 89 e5 48 83 ec 18 48 8d 7d f0 e8 07 64 11 e1 48 8b 45 f0 48 8b 7d f8 48 8d 75 e8 ba 08 00 00 00 <48> 8b 00 48 89 45 e8 e8 ba 63 11 e1 31 c0 c9 c3 66 0f 1f 44 00 00
+RSP: 0018:ffffc900000c7e18 EFLAGS: 00000246
+RAX: 0000000000000000 RBX: 0000000000000385 RCX: 0000000000000000
+RDX: 0000000000000008 RSI: ffffc900000c7e18 RDI: 00007fff7ebc06b8
+RBP: ffffc900000c7e30 R08: 00007fff7ebc06b8 R09: 00000000000000da
+R10: 0000000000000007 R11: 0000000000000000 R12: 00007fff7ebc0670
+R13: ffff88800349bc00 R14: 00007fff7ebc0670 R15: ffff88800338c400
+FS:  0000000001ac2880(0000) GS:ffffffff81836000(0000) knlGS:0000000000000000
+CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+CR2: 0000000000000000 CR3: 00000000033c0000 CR4: 00000000005406b0
+PKRU: 55555554
+flux_baby_2 closed
+Killed
+```
+
+The program let's us to:
+- check our id,
+- read a file: we first read /etc/passwd and then /flag file. As expected we can read /etc/passwd but as a user we don't have enough permissions to read a /flag file.
+- perform read operation,
+- perform write operation
+
+We can guess that we have to use read & write operations to escalate our privilages to root to read a /flag file.
+We also saw that when trying to perform read operation we got a kernel panic message Oops with: 
+`BUG: unable to handle kernel NULL pointer dereference` message. It means that kernel tried to access/write on invalid memory. More informations we can get from 000 which are in `Oops: 0000 [#1] PREEMPT NOPTI` message. They are defined [here](https://elixir.bootlin.com/linux/latest/source/arch/x86/include/asm/traps.h#L167) as:
+
+```c
+//  arch/x86/mm/fault.c
+/*
+ * Page fault error code bits:
+ *
+ *   bit 0 ==    0: no page found   1: protection fault
+ *   bit 1 ==    0: read access     1: write access
+ *   bit 2 ==    0: kernel-mode access  1: user-mode access
+ *   bit 3 ==               1: use of reserved bit detected
+ *   bit 4 ==               1: fault was an instruction fetch
+ */
+ ```
+
+So in our case we can read our kernel panic as:
+"Kernel tried to read a page that could not be found".
+
+
+
+
 
 
 ## References
