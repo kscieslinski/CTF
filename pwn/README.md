@@ -1,7 +1,31 @@
 # PWN challenges
 This is a collection of pwn challenges I've solved or partialy solved but wrote writeup in order to better understand the solution. I started learning about low level security on 10.2019. Most of the writeups are made only for myself so I can track my progress and store some useful tricks. Therefore they might be hard to understand and contain a lot of gramma mistakes.
 
+Every directory consists of:
+- README.md which is just my writeup for a task
+- TASK.md which contains challenge description
+- files/ folder where you can find all files provided in the challenge
+- img/ folder where I place some screenshots/pictures
 
+
+## Old kernel tasks
+I've decided I want to learn some kernel hacking. I will place here some writeups from old ctfs which I havn't participated in, but I managed to get files for kernel tasks.
+<table>
+  <tbody>
+    <tr>
+        <th align="center">CTF</th>
+        <th align="center">Challenge</th>
+        <th align="center">Tags</th>
+        <th align="center">Notes</th>
+    </tr>
+    <tr>
+        <td>Hacklu CTF 2019</td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/hacklu2019/BabyKernel2">BabyKernel2</a></td>
+        <td>+smep, +smap, -kaslr</td>
+        <td>explains basics of kernel exploitation</td>
+    </tr>
+  </tbody>
+</table>
 
 ## CTFZone 2019
 On 30.11.2019 - 01.12.2019 I've been playing TUCTF with Made in MIM team. I've solved few tasks (leakalicious, vulnmath, ctftp, cute animal company). The challenges were really easy even for me and so I decided to take a look at CTFZone ctf which has been online at the same time. I've picked a tictactoc task. It was really cool challenge! It wasn't hard, but it required writing some assembly code. The plot was super nice as well. I encourage you to try it yourself. You can find all files you need in files/ folder.
