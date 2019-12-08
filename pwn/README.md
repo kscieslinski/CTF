@@ -20,7 +20,7 @@ I've decided I want to learn some kernel hacking. I will place here some writeup
     </tr>
     <tr>
         <td>Hacklu CTF 2019</td>
-        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/hacklu2019/BabyKernel2">BabyKernel2</a></td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/hacklu2019/BabyKernel2">BabyKernel2 - 202 pts</a></td>
         <td>+smep, +smap, -kaslr</td>
         <td>explains basics of kernel exploitation</td>
     </tr>
