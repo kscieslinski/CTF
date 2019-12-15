@@ -213,6 +213,8 @@ After write and before ioctl our memory layout looks like:
 
 ![](img/diagram6.png)
 
+and so when calling `ioctl(tty_fd, 0, 0)` a function under 12 index in fake_tty_operations will get called. In this case it would cause kernel panic as smep is enabled and perhaps memory under 0x4141414141414141 is not mapped.
+
 
 
 ### Protections
