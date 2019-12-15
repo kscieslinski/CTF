@@ -134,7 +134,11 @@ int tty_fd = open("/dev/ptmx", O_RDWR | O_NOCTTY, 0); // alocates tty_struct of 
 If you are having troubles imagine how it looks like, I've created a diagram to help you. 
 This is how a situation looks like after executing `int fd1 = open("/dev/babydev", O_RDWR, 0);`. 
 
+![](img/diagram1.png)
+
+
 ![](img/diagram4.png)
+
 
 
 
