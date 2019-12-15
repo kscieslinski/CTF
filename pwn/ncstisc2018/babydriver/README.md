@@ -209,6 +209,10 @@ write(fd2, fake_tty_header, sizeof(fake_tty_header);
 ioctl(tty_fd, 0, 0);
 ```
 
+After write and before ioctl our memory layout looks like:
+
+![](img/diagram6.png)
+
 
 
 ### Protections
