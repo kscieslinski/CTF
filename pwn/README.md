@@ -9,7 +9,7 @@ Every directory consists of:
 
 
 ## Old kernel tasks
-I've decided I want to learn some kernel hacking. I will place here some writeups from old ctfs which I havn't participated in, but I managed to get files for kernel tasks.
+I've decided I want to learn about kernel hacking. I will place here writeups from old ctfs which I haven't participated in, but I managed to find source files for kernel tasks.
 <table>
   <tbody>
     <tr>
