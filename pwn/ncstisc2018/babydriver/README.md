@@ -105,18 +105,38 @@ Of course this is very bad and vulnerable example of code. One should use a `pri
 Why above code is vulnerable? Well, imagine we open `/dev/babydev` twice and then close it once:
 
 ```c
-fd1 = open("/dev/babydev", O_RDWR, 0);
-fd2 = open("/dev/babydev", O_RDWR, 0);
+int fd1 = open("/dev/babydev", O_RDWR, 0);
+int fd2 = open("/dev/babydev", O_RDWR, 0);
 close(fd1);
 ```
 
- On first call to open a buffer (let's name it buffer1) of size 0x40 get's allocated and we get a handle fd1. On second call to open we allocate new buffer (name it buffer2), get handle fd2 and we just loose track of the previous one. As c has no garbage collector this leads to memory leaks but it is not vulnerable itself. But then we call close(fd1) and we free the buffer2. The memory chunk get's placed back to kmem_cache but we still can access it via fd2. This is standard example of use-after-free vulnerability.
+ On first call to open a buffer (let's name it buffer1) of size 0x40 get's allocated and we get a handle fd1. On second call to open we allocate new buffer (name it buffer2), get handle fd2 and we just loose track of the previous one. As c has no garbage collector this leads to memory leaks but it is not vulnerable itself. But then we call close(fd1) and we free the buffer2. The memory chunk get's placed back to kmalloc_cache but we still can access it via fd2. This is standard example of use-after-free vulnerability.
 
 ## Exploit
 As I had no experience with exploiting use-after-free I used [lexfo](https://blog.lexfo.fr/cve-2017-11176-linux-kernel-exploitation-part1.html) tutorial a lot.ne I really recommend it to anyone who want's to start with kernel exploitation. Moreover I saw some writeups later on and it seems that there is another way to repair the stack with `swapgs` gadget.
 
 ### Gaining control over RIP via tty_struct
-Above in UAF section I've presented a situation where a freed memory chunk get's placed back in kmem_cache but we can still write and read on it.
+Above in UAF section I've presented a situation where a freed memory chunk get's placed back in kmalloc_cache but we can still write and read on it. To gain control over execution flow we have to force kernel allocator (SLUB) to allocate some object we have control over on the chunk we freed. There are standard techniques for this. One of them is using `tty_struct` object of size 0x2e0 for this (0x2e0 will land in bucket: 2^10).
+
+```c
+int fd1 = open("/dev/babydev", O_RDWR, 0);
+int fd2 = open("/dev/babydev", O_RDWR, 0);
+
+ioctl(fd1, 0x10001, 0x2e0); // resize, so chunk get placed in right bucket
+
+close(fd1);
+
+int tty_fd = open("/dev/ptmx", O_RDWR | O_NOCTTY, 0); // alocates tty_struct of size 0x2e0
+
+
+```
+
+If you are having troubles imagine how it looks like, I've created a diagram to help you. 
+This is how a situation looks like after executing `int fd1 = open("/dev/babydev", O_RDWR, 0);`. 
+
+![](img/diagram4.png)
+
+
 
 ### Protections
 To check software and hardware protections I've checked `boot.sh` file:
@@ -137,3 +157,7 @@ This means that we will have to bypass `smep` before invoking userland code as s
 ### Plan
 
 
+
+
+## References:
+- https://blog.csdn.net/lukuen/article/details/6935068
