@@ -1,0 +1,106 @@
+# babydriver (kernel, uaf, tty_struct, smep, -smap, -kaslr)
+This was my third kernel challenge and first in which I had to exploit use after free vulnerability. I will not explain here what bzImage/*.cpio files are as I've did this in [previous](https://github.com/kscieslinski/CTF/tree/master/pwn/hacklu2019/BabyKernel2) kernel writeup.
+
+## Enumeration
+### Looking inside
+I've started with unpacking provided files and looking inside rootfs.cpio:
+
+```console
+$ tar -xf babydriver_0D09567FACCD2E891578AA83ED3BABA7.tar
+$ ls
+boot.sh  bzImage  rootfs.cpio
+$ mkdir extracted
+$ cd extracted
+$ zcat ../rootfs.cpio | cpio -idvm .
+.
+etc
+etc/init.d
+etc/passwd
+etc/group
+bin
+bin/su
+bin/grep
+bin/watch
+[...]
+$ ls lib/modules/4.4.72/
+babydriver.ko
+```
+
+So as usuall, we are given kernel compressed image (bzImage) along with filesystem (rootfs.cpio) in which we can find kernel module binary (babydriver.ko).
+
+Unfortunately we are not given vmlinux nor System.map. Both would be really helpful when debugging.
+
+### RE
+Having kernel module binary I've opened it under Ghidra. The reverse engineering part was super easy.
+
+```c
+
+struct babydev_t {
+    char *device_buf;
+    size_t device_buf_len;
+};
+
+struct babydev_t babydev_struct;
+
+
+int babyopen(void *inode,void *filep)
+{
+  babydev_struct.device_buf = (char *)kmalloc(0x40, GFP_KERNEL);
+  babydev_struct.device_buf_len = 0x40;
+  printk("device open\n");
+  return 0;
+}
+
+int babyrelease(void *inode,void *filep)
+{
+  kfree(babydev_struct.device_buf);
+  printk("device release\n");
+  return 0;
+}
+
+ssize_t babyread(struct file *filep, char *__user buff, size_t count, loff_t *offp)
+{
+    if (babydev_struct.device_buf && babydev_struct.device_buf_len >= count)
+    {
+        copy_to_user(buf, babydev_struct.device_buf, count);
+    }
+
+    return 0;
+}
+
+ssize_t babywrite(struct file *filep, char *__user buff, size_t count, loff_t *offp)
+{
+    if (babydev_struct.device_buf && babydev_struct.device_buf_len >= count)
+    {
+        copy_from_user(babydev_struct.device_buf, buf, count);
+    }
+
+    return 0;
+}
+
+long babyioctl(struct file *filep, unsigned int cmd, unsigned long arg)
+{
+    if (cmd == 0x10001)
+    {
+        kfree(babydev_struct.device_buf);
+        babydev_struct.device_buf = (char *)kmalloc(arg, GFP_KERNEL);
+        babydev_struct.device_buf_len = arg;
+        printk(KERN_INFO "alloc done\n");
+        return 0;
+    }
+    else
+    {
+        printk(KERN_INFO "default arg is %lx\n", 0x10001);
+        return -EINVAL;
+    }
+}
+```
+
+There is one global variable: `babydev_struct`. When opening a device we allocate a buffer of size 0x40 and when closing we free this buffer. Moreover we can write to and read from a buffer and resize it.
+
+
+### UAF
+Of course this is very bad and vulnerable example of code. One should use a `private_data` field of filep for this kind of logic.
+
+Why above code is vulnerable? Well, imagine we open `/dev/babydev` twice and then close it once. On first call to open a buffer (let's name it buffer1) of size 0x40 get's allocated and we get a handle fd1. On second call to open we allocate new buffer (name it buffer2), get handle fd2 and we just loose track of the previous one. As c has no garbage collector this leads to memory leaks but it is not vulnerable itself. But then we call close(fd1) and we free the buffer2. The memory chunk get's placed back to kmem_cache but we still can access it via fd2. This is standard example of use-after-free vulnerability.
+
