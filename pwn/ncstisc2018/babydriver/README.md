@@ -102,12 +102,23 @@ There is one global variable: `babydev_struct`. When opening a device we allocat
 ### UAF
 Of course this is very bad and vulnerable example of code. One should use a `private_data` field of `struct file` for allocating custom per open data.
 
-Why above code is vulnerable? Well, imagine we open `/dev/babydev` twice and then close it once. On first call to open a buffer (let's name it buffer1) of size 0x40 get's allocated and we get a handle fd1. On second call to open we allocate new buffer (name it buffer2), get handle fd2 and we just loose track of the previous one. As c has no garbage collector this leads to memory leaks but it is not vulnerable itself. But then we call close(fd1) and we free the buffer2. The memory chunk get's placed back to kmem_cache but we still can access it via fd2. This is standard example of use-after-free vulnerability.
+Why above code is vulnerable? Well, imagine we open `/dev/babydev` twice and then close it once:
+
+```c
+fd1 = open("/dev/babydev", O_RDWR, 0);
+fd2 = open("/dev/babydev", O_RDWR, 0);
+close(fd1);
+```
+
+ On first call to open a buffer (let's name it buffer1) of size 0x40 get's allocated and we get a handle fd1. On second call to open we allocate new buffer (name it buffer2), get handle fd2 and we just loose track of the previous one. As c has no garbage collector this leads to memory leaks but it is not vulnerable itself. But then we call close(fd1) and we free the buffer2. The memory chunk get's placed back to kmem_cache but we still can access it via fd2. This is standard example of use-after-free vulnerability.
 
 ## Exploit
 As I had no experience with exploiting use-after-free I used [lexfo](https://blog.lexfo.fr/cve-2017-11176-linux-kernel-exploitation-part1.html) tutorial a lot.ne I really recommend it to anyone who want's to start with kernel exploitation. Moreover I saw some writeups later on and it seems that there is another way to repair the stack with `swapgs` gadget.
 
-## Protections
+### Gaining control over RIP via tty_struct
+Above in UAF section I've presented a situation where a freed memory chunk get's placed back in kmem_cache but we can still write and read on it.
+
+### Protections
 To check software and hardware protections I've checked `boot.sh` file:
 
 ```bash
@@ -119,4 +130,10 @@ qemu-system-x86_64 -initrd rootfs.cpio -kernel bzImage -append 'console=ttyS0 ro
 
 Note: I've added `stty intr ^]` so that I can eassly kill qemu on kernel panic.
 
-So from `boot.sh` we can read that there is a hardware protection `smep` (Supervisor mode execution protection), but fortunetely there is no `kaslr` (kernel address space layout randomization) turn on.
+So from reading `boot.sh` we can determinate that there is a hardware protection `smep` (Supervisor mode execution protection), but fortunetely there is no `kaslr` (kernel address space layout randomization) turn on.
+
+This means that we will have to bypass `smep` before invoking userland code as smep does not allow kernel to execute code from userland.
+
+### Plan
+
+
