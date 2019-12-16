@@ -19,9 +19,15 @@ I've decided I want to learn about kernel hacking. I will place here writeups fr
         <th align="center">Notes</th>
     </tr>
     <tr>
+        <td>NCSTISC 2018</td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/ncstisc2018/babydriver">babydriver</a></td>
+        <td>kernel, uaf, tty_struct, +smep, -smap, -kaslr</td>
+        <td>explains tty_struct use-after-free technique</td>
+    </tr>
+    <tr>
         <td>Hacklu CTF 2019</td>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/hacklu2019/BabyKernel2">BabyKernel2 - 202 pts</a></td>
-        <td>+smep, +smap, -kaslr</td>
+        <td>kernel, +smep, +smap, -kaslr</td>
         <td>explains basics of kernel exploitation</td>
     </tr>
   </tbody>
