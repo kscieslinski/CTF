@@ -524,6 +524,7 @@ This means that we will have to bypass `smep` before invoking userland code as s
 
 ### Plan
 As we cannot directly execute userland code, we have to use ROP instead. We will:
+
 [x] trigger use-after-free with tty_struct
 [x] create fake tty_operations and overwrite tty_struct->ops field so it points to it
 [ ] allocate fake stack and then overwrite fake tty_operations.ioctl field with a gadget which will pivot the kernel stack
