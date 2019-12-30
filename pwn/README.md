@@ -19,6 +19,12 @@ I've decided I want to learn about kernel hacking. I will place here writeups fr
         <th align="center">Notes</th>
     </tr>
     <tr>
+        <td align="center">CSAW 2015</td>
+        <td align="center"><a href="">solid_core</a></td>
+        <td align="center">kernel, modprobe, +smep, +smap, +kaslr</td>
+        <td align="center"></td>
+    </tr>
+    <tr>
         <td>NCSTISC 2018</td>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/ncstisc2018/babydriver">babydriver</a></td>
         <td>kernel, uaf, tty_struct, +smep, -smap, -kaslr</td>
