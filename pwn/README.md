@@ -20,7 +20,7 @@ I've decided I want to learn about kernel hacking. I will place here writeups fr
     </tr>
     <tr>
         <td align="center">CSAW 2015</td>
-        <td align="center"><a href="">solid_core</a></td>
+        <td align="center"><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/csaw2015/solid_core">solid_core</a></td>
         <td align="center">kernel, modprobe, +smep, +smap, +kaslr</td>
         <td align="center"></td>
     </tr>
