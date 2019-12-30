@@ -22,7 +22,7 @@ typedef struct channel_t
     unsigned int index;
     char *buf;
     size_t buf_size;
-    long pos;
+    size_t pos;
 } channel_t;
 
 typedef struct create_channel_arg_t
@@ -188,8 +188,9 @@ int realloc_ipc_channel(int index, long count, int sign)
     else
         new_buf_size = channel->buf_size + count;
 
-    new_buf = krealloc(channel->buf, new_buf_size, GFP_KERNEL);
+    new_buf = krealloc(channel->buf, new_buf_size + 1, GFP_KERNEL);
     channel->buf = new_buf;
+    channel->buf_size = new_buf_size;
 
     channel->ref_count -= 1;
     if (channel->ref_count == 0)
