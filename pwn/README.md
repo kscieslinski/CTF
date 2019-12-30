@@ -19,10 +19,10 @@ I've decided I want to learn about kernel hacking. I will place here writeups fr
         <th align="center">Notes</th>
     </tr>
     <tr>
-        <td align="center">CSAW 2015</td>
-        <td align="center"><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/csaw2015/solid_core">solid_core</a></td>
-        <td align="center">kernel, modprobe, +smep, +smap, +kaslr</td>
-        <td align="center"></td>
+        <td>CSAW 2015</td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/csaw2015/solid_core">solid_core</a></td>
+        <td>kernel, modprobe, +smep, +smap, +kaslr</td>
+        <td></td>
     </tr>
     <tr>
         <td>NCSTISC 2018</td>
