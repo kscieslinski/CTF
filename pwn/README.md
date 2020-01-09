@@ -19,6 +19,12 @@ I've decided I want to learn about kernel hacking. I will place here writeups fr
         <th align="center">Notes</th>
     </tr>
     <tr>
+      <td>PlaidCTF 2013</td>
+      <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/plaid2013/servr">servr</a></td>
+      <td>kernel, heap overflow, struct file, -smep, -smap, -kaslr</td>
+      <td></td>
+    </tr>
+    <tr>
         <td>CSAW 2015</td>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/csaw2015/solid_core">solid_core</a></td>
         <td>kernel, modprobe, +smep, +smap, +kaslr</td>
