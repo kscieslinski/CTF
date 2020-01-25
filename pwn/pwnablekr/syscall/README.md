@@ -260,3 +260,7 @@ $ ./a.out
 [d] Result of userland_escalate: 0
 Co.....................//
 ```
+
+
+## References:
+- https://azeria-labs.com : Great tutorial about arm exploitation. I love the part about setting up a private lab.
