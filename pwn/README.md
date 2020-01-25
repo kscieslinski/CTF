@@ -96,7 +96,7 @@ I participated in this CTF myself on a train ride. I've tried and completed two 
     </tr>
     <tr>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/pwnablekr/syscall">syscall - 200pts</a></td>
-        <td>(arm7vl, kernel, missing copy-from-user</td>
+        <td>arm7vl, kernel, missing copy-from-user</td>
         <td></td>
     </tr>
   </tbody>
