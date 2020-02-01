@@ -134,6 +134,14 @@ Start      End        Offset     Perm Path
 0xfffdd000 0xffffe000 0x00000000 rw- [stack]
 ```
 
+If your gdb crashes, then you might want to try other technique:
+
+```gdb
+$ gdb ./dubblesort
+gef➤ set exec-wrapper env 'LD_PRELOAD=./libc_32.so.6'
+gef➤ start
+```
+
 We can see that the patched binary loaded /home/k/pwnabletw/dubblesort/libc_32.so.6 meaning we successfuly compleated all three steps:
 - [x] downloading respective dynamic linker (ex. ld-2.23.so)
 - [x] patching elf to make it use our dynamic linker
