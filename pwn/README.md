@@ -19,6 +19,12 @@ I've decided I want to learn about kernel hacking. I will place here writeups fr
         <th align="center">Notes</th>
     </tr>
     <tr>
+      <td>UTCTF 2020</td>
+      <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/utctf2020/simp">Simplicio's Jail</a></td>
+      <td>kernel, -smep, -smap, -kaslr</td>
+      <td>swapgs</td>
+    </tr>
+    <tr>
       <td>PlaidCTF 2013</td>
       <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/plaid2013/servr">servr</a></td>
       <td>kernel, heap overflow, struct file, -smep, -smap, -kaslr</td>

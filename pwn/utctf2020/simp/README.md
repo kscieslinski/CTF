@@ -1,4 +1,4 @@
-# Simplicio's Jail (kernel, arbitrary write, -smep, -smap, -kaslr)
+# Simplicio's Jail (kernel, -smep, -smap, -kaslr)
 
 I havn't been able to take part in UTCTF as I've been away for the weekend. I've saw this challenge when I camed back and I've decided to try it out. I will only focus on the kernel part of the challenge assuming that I have a full control to low priv shell on target machine.
 
@@ -197,9 +197,9 @@ int main()
 
 ## Swapgs, iretq
 But the above code won't work! We cannot call execve just like that from kernel. But there is a simple way to return safely to user land without causing the kernel crash.
-We can get back to userland by invoking swapgs, followed by iretq. This is how a kernel normally would return the execution from interupt back to user program. It might look overhelming, but it is quite simple.
+We can get back to userland by invoking swapgs, followed by iretq. This is how a kernel normally would return the execution from interupt back to user's program. It might look overhelming, but in fact it is quite simple.
 
-We first need to save the our program state. This is: $rsp, $cs, $ss, $rflags. To this state we will return from kernel land:
+We first need to save our program state. This is: $rsp, $cs, $ss and $rflags. To this state we will return later from kernel land:
 
 ```c
 typedef struct state_t
