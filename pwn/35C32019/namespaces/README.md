@@ -170,7 +170,7 @@ Let's say we have a situation where we have two sandboxes with roots in:
 and receiver has already access to file descriptor refering /tmp/chroots/1. 
 Now we create a new sandbox. The main process clones and it's child will now first create a folder /tmp/chroots/<$sandbox_uid> and then chroot to it.
 
-```
+```c
 void mk_chroot_dir(char *path) {
     mkdir(path, 0);
     chmod(path, 777);
