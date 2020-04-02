@@ -427,3 +427,7 @@ int takeover_escalator_process(pid_t escalator_pid)
     ptrace(PTRACE_DETACH, escalator_pid, NULL, NULL);
 }
 ```
+
+The shellcode just prints /flag file content.
+The python part can be found [here](exp.py).
+The C part consists of 4 separete programs.
