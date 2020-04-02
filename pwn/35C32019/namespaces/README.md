@@ -431,5 +431,9 @@ int takeover_escalator_process(pid_t escalator_pid)
 
 The shellcode just prints /flag file content.
 
-The python part can be found [here](exp.py).
-The C part consists of 4 separete programs.
+The python part can be found [here](exp-files/exp.py). </br>
+The C part consists of 4 separete programs:
+1) [sender](exp-files/sender.c) responsible for sending file descriptor for /tmp/chroots/1 to receiver
+2) [receiver](exp-files/receiver.c) receives file descriptor from sender and wins a race with init process by substituting /tmp/chroots/2 with symlink to /
+3) [init](exp-files/init.c) forks to gain capabilities, tricks joining process to join new pid namespace in which he has all capabilities and is able to takeover it with ptrace.
+4) [blocker](exp-files/blocker.c) just prevents from closing sandbox
