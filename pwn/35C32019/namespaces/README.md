@@ -107,7 +107,51 @@ pathname (marked as being of type socket). Linux also supports an abstract names
 which is independent of the filesystem.
 ```
 
+How do they work? Well they are just referenced by socket name, that's all.
 
+```c
+int listen_for_connection() {
+    /* Create named socked in abstract namespace, as sandboxes doesn't share file system. */
+    int rcv_sk = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (rcv_sk == -1) {
+        perror("[!] socket failed");
+        return -1;
+    }
 
+    /* Bind abstract socket. The rcv_addr.sun_path[0] must be null byte to indicate this is an abstract socket. */
+    struct sockaddr_un rcv_addr;
+    memset(&rcv_addr, 0x0, sizeof(struct sockaddr_un));
+    strncpy(&rcv_addr.sun_path[1], RCV_NAME, strlen(RCV_NAME) + 1);
+    rcv_addr.sun_family = AF_UNIX;
+    if (bind(rcv_sk, (struct sockaddr*) &rcv_addr, sizeof(sa_family_t) + strlen(RCV_NAME) + 1) == -1) {
+        perror("[!] bind failed");
+        return -1;
+    }
+}
+```
+
+Ok, so our processes can communicate with each other. But it doesn't mean they can access files outside of their root folders yet.
+But there is another useful feature UNIX sockets support. It is transfering file descriptors!
+
+```
+UNIX domain sockets support passing file descriptors or process
+credentials to other processes using ancillary data.
+```
 
 For simplicity I will call process inside /tmp/chroots/0 a receiver and process inside /tmp/chroots/1 a sender.
+A sender will retrieve a root directory:
+
+```c
+int main() {
+     /* Send file descriptor to sender's chroot directory: /tmp/chroots/<sender sandbox idx>. */
+    int dir_fd = open("/", O_DIRECTORY | O_RDONLY, 0);
+}
+```
+
+and will send this file descriptor to receiver. Sending file descriptors must be done using ancillary data messages which are a bit complicated. You can find source code of function responsible for sending file descriptor in sender.c (send_fd) and source code of function responsible for receiving it in receiver.c (receive_fd).
+
+So our receiver got a file descriptor to /tmp/chroots/1, how can it now access a files inside this folder? Well almost every function operating on files which requires passing full path has it equivalent which takes a directory file descriptor and relative path. And so:
+open -> has equivalent openat,
+symlink -> has equivalent symlinkat,
+readlink -> has equivalent readlinkat,
+etc.
