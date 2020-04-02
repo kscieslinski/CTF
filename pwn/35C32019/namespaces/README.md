@@ -221,4 +221,15 @@ void substitude_chroot_folder(int fd) {
 }
 ```
 
-## Gaining ca
+## Escalate?
+Now we have an init process which sucessfully escaped chroot. But we must escalate to root. Our init process in an owner of it's pid_namespace and so if it had an CAP_SYS_PTRACE it could trace any process in same pid namespace. How is that usefull? Well, when a new process joins sandbox it first joins the sandboxed process namespaces, then chroots and finally it drops it privileges by invoking setresuid/setresgid. But at the moment when this process joins init process pid namespace, the init process can takeover it with ptrace and thus prevent it from dropping privileges!!!
+
+But there are few problems. First our init process has no CAP_SYS_PTRACE. In order to gain CAP_SYS_PTRACE it has to create a new user namespace.
+
+```
+The child process created by clone(2) with the CLONE_NEWUSER flag
+starts out with a complete set of capabilities in the new user
+namespace. Likewise, a process that creates a new user namespace
+using unshare(2) or joins an existing user namespace using setns(2)
+gains a full set of capabilities in that namespace.
+```
