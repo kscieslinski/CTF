@@ -8,6 +8,25 @@ Every directory consists of:
 - img/ folder where I place some screenshots/pictures
 
 
+## Old sandbox escape tasks
+Same as with kernel tasks I've decided to look at sandbox escapes. 
+<table>
+  <tbody>
+    <tr>
+        <th align="center">CTF</th>
+        <th align="center">Challenge</th>
+        <th align="center">Tags</th>
+        <th align="center">Notes</th>
+    </tr>
+    <tr>
+        <td>35C3 2019</td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/35C32019/namespaces">Namespaces</a></td>
+        <td>sandbox, namespaces, chroot</td>
+        <td></td>
+    </tr>
+  </tbody>
+</table>
+
 ## Old kernel tasks
 I've decided I want to learn about kernel hacking. I will place here writeups from old ctfs which I haven't participated in, but I managed to find source files for kernel tasks.
 <table>
