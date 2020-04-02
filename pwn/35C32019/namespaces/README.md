@@ -102,7 +102,9 @@ If two processes share same net_namespace, they could communicate using socket. 
 
 ```man
 # man page
-Traditionally, UNIX domain sockets can be either unnamed, or bound to a filesystem pathname (marked as being of type socket). Linux also supports an abstract namespace which is independent of the filesystem.
+Traditionally, UNIX domain sockets can be either unnamed, or bound to a filesystem
+pathname (marked as being of type socket). Linux also supports an abstract namespace
+which is independent of the filesystem.
 ```
 
 
