@@ -20,6 +20,12 @@ Same as with kernel tasks I've decided to look at sandbox escapes.
     </tr>
     <tr>
         <td>35C3 2019</td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/35C32019/collection">Collection</a></td>
+        <td>sandbox, cpython, type confusion</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>35C3 2019</td>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/35C32019/namespaces">Namespaces</a></td>
         <td>sandbox, namespaces, chroot</td>
         <td></td>
