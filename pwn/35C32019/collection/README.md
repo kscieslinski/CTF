@@ -71,7 +71,12 @@ for k in keys:
 
 It imports custom Collection module, deletes 'os' and all builtins methods except of `id`, `hex`, `print` and `range`.
 
-So in fact this code is setting a python sandbox.
+So in fact this code is setting a python sandbox. If for example the prefix was just an empty string, then we could just gain content of flag by: 
+
+```python3
+from os import read
+print(read(1023, 30))
+```
 
 ## Collection.so
 As I've mentioned at the beginning it was my first python escape challenge and so I wasn't sure where to look for vulnerabilities. I thought that it has to do with the way `modules` has been imported and I've wasted some time trying to escape this sandbox without touching Collection.so library.
@@ -86,7 +91,7 @@ dir(Collection.Collection)
 ```
 
 ## Seccomp
-So how to start reversing cpython module? Well refering to the [documentation](https://docs.python.org/3/extending/extending.html) every module has PyInit_modulename function. This function is being invoked when module is imported. And so it was my starting point:
+So how to start reversing cpython module? Well refering to the [documentation](https://docs.python.org/3/extending/extending.html) every module has PyInit_modulename function. This function is  invoked when module is being imported. It is responsible for declaring methods and types (in this case the Collection type and get method). And so it was my starting point:
 
 ```c
 PyObject* PyInit_Collection() {
@@ -106,7 +111,7 @@ PyObject* PyInit_Collection() {
 }
 ```
 
-so the only interesting part was `init_sandbox` function. It was only setting some seccomp rules. I hate to reverse those rules by hand, so I've used `seccomp-tools` to dump them.
+The only interesting part in PyInit_Collection was `init_sandbox` function. It was setting some seccomp rules. I hate to reverse those rules by hand, so I've used `seccomp-tools` to dump them.
 
 ```console
 $ seccomp-tools
@@ -144,6 +149,63 @@ $ seccomp-tools dump -c "python3 test.py"
  0028: 0x06 0x00 0x00 0x00000000  return KILL
 ```
 
-Not useful right now, but might be helpful later on. For now I've patched the `init_sandbox` with nops as those rules where really anoying. For example with unpatched `init_sandbox` I was unable to import module after `import Collection` instruction.
+Not useful right now, but might be helpful later on. For now I've patched the `init_sandbox` with nops as those rules where really anoying. For example with unpatched `init_sandbox` I was unable to import module after `import Collection` instruction:
 
-## __new__
+```console
+$ cat test_imports.py
+import Collection
+import signal
+
+$ python3.6 test_imports.py
+Bad system call (core dumped)
+
+$ dmesg | tail -1
+[43598.415996] audit: type=1326 audit(1586369880.557:43): auid=1000 uid=1000 gid=1000 ses=2 pid=20482 comm="python3" exe="/usr/bin/python3.6" sig=31 arch=c000003e syscall=4 compat=0 ip=0x7fce78771775 code=0x0
+```
+
+## Breakpoints
+Before moving to reversing `__init__` and `__new__` functions let me paste some useful tricks and explain some basics about how cpython objects are structured.
+First thing that has been bothering me, was how can I examine the memory layout of an objects from gdb. So some useful tricks:
+
+1) To get address of an object use `id` function.
+2) To invoke breakpoint at any time use trick with signal.
+
+```console
+$ cat tricks.py 
+
+import signal
+import os
+
+def do_nothing(*args):
+    pass
+
+# Declare custom signal
+signal.signal(signal.SIGUSR1, do_nothing)
+
+# Create list
+example_list = [1, 2, 3, 4, 5]
+print(f"[i] Address of example_list: {hex(id(example_list))}")
+
+# Invoke signal to capture execution in gdb
+os.kill(os.getpid(), signal.SIGUSR1)
+
+$ gdb --args python3 tricks.py
+pwndbg> run
+[i] Address of example_list: 0x7ffff6024908
+
+Program received signal SIGUSR1, User defined signal 1
+pwndbg> x/4gx 0x7ffff6024908
+0x7ffff6024908:	0x0000000000000001	0x00000000009c70e0
+0x7ffff6024918:	0x0000000000000005	0x00007ffff7ecfad0
+
+pwndbg> x/1gx 0x00000000009c70e0
+0x9c70e0 <PyList_Type>:	0x000000000000002a
+pwndbg> x/5gx 0x00007ffff7ecfad0
+0x7ffff7ecfad0:	0x0000000000a68ac0	0x0000000000a68ae0
+0x7ffff7ecfae0:	0x0000000000a68b00	0x0000000000a68b20
+0x7ffff7ecfaf0:	0x0000000000a68b40
+```
+
+## Understanding PyObject memory layout
+It is very important to understand the memory layout of objects in cpython. Take a look at the above example in which we have declared a simple list object.
+Every object in cpython has two fields: `ref_cnt` and `type`. The first one is used by garbage collector. When reference count drops to 0, the python will call `__del__` method on the object. Of course the destructors should differ for lists and for example for dicts and so the garbage collector must differentiate them somehow. And this is where `type` field comes into play. It is a pointer to type object. In above example the `example_list` lies at address 0x7ffff6024908. The `ref_cnt` is at 0x7ffff6024910 and `type` field at 0x00000000009c70e0. When checking 0x00000000009c70e0 we can see that it is in fact pointer to PyList_Type.
