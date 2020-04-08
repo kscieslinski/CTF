@@ -209,3 +209,10 @@ pwndbg> x/5gx 0x00007ffff7ecfad0
 ## Understanding PyObject memory layout
 It is very important to understand the memory layout of objects in cpython. Take a look at the above example in which we have declared a simple list object.
 Every object in cpython has two fields: `ref_cnt` and `type`. The first one is used by garbage collector. When reference count drops to 0, the python will call `__del__` method on the object. Of course the destructors should differ for lists and for example for dicts and so the garbage collector must differentiate them somehow. And this is where `type` field comes into play. It is a pointer to type object. In above example the `example_list` lies at address 0x7ffff6024908. The `ref_cnt` is at 0x7ffff6024910 and `type` field at 0x00000000009c70e0. When checking 0x00000000009c70e0 we can see that it is in fact pointer to PyList_Type.
+
+Next, for containers such as lists we have a `length` field. In this example our `example_list` has 5 elements and so the `length` field is set to 5. You can see the address of length field is at 0x7ffff6024918. Finally a list object has PyObject **items field. 
+
+## Back to RE
+With this knowledge the reverse engineering part should be quite easy. The `__new__` method just checks that when creating a new Collection a user provided a dictionary with no more then 32 keys.
+
+The `__init__` function is much longer. 
