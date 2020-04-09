@@ -324,4 +324,8 @@ On the other hand if we ask for `c1.get('b')`, the program finds the index – w
 
 Till this point everything should be clear. But how does it look like when it comes to type confusion. Look at `c2` defined above. As we have mentioned it has exactly the same `type_handler`, but the values look different:
 
-![](img/collection2.png)    
+![](img/collection.png)
+
+So this time let's ask for `c2.get('a')`. The program is checking the type and the position. The position is `0` (not 1!!!) and the type is `1` indicating it is a raw type. So the program will return the address of list [3, 4]!!!
+
+## Arbitrary read/write
