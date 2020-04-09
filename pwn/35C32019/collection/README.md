@@ -240,11 +240,88 @@ While `ref_cnt` and `type` are standard PyObject fields, the type_handler is mor
 It stores information about the dictionary entries. This information is stored in form of a linked
 list. 
 Each record in the list has name of the key and type field which can be either 0 or 1. 
-1 indicates that the value is of basic type – long and 0 that it is of type list/dictionary.
+1 indicates that the value associated with the key is of basic type – long and 0 that it is of type list/dictionary.
 
-Let's see some examples:
+Let's see an example:
 
+```python3
 c = Collection.Collection({'a': 8, 'b': {'bb': 8}, 'c': [1, 2, 3]})
+```
+
 The type handler will look like:
 
-[  ] --> []
+['a', 1] --> ['b', 0] -> ['c', 0]
+
+The reason behind this type handler is to know whether `get` must convert the type from long to PyLong. 
+This is because the the values of type long are stored as a raw number and not as a PyLong. 
+
+You can check the pseudo code of `__init__` in [source.c](source.c)
+
+## type_handler
+There is one more thing about type handler. When we have two dictionaries with same types and key names the program doesn't
+create a new handler but first checks if there exists already such a handler. If yes it just stores a reference to it 
+instead of creating a new one. This is just an optimization mechanizm.
+Lets check this in practice:
+
+```gdb
+$ cat test.py
+import signal
+import os
+import Collection
+
+
+def do_nothing(*args):
+    pass
+
+# Declare custom signal
+signal.signal(signal.SIGUSR1, do_nothing)
+
+c1 = Collection.Collection({'a': 1, 'b': [1, 2]})
+c2 = Collection.Collection({'a': 88, 'b': [6, 4, 2]})
+print(f"[i] c1: {hex(id(c1))}")
+print(f"[i] c2: {hex(id(c2))}")
+
+# Invoke signal to capture execution in gdb
+os.kill(os.getpid(), signal.SIGUSR1)
+
+$ gdb --args python3.6 test.py
+pwndbg> run
+[i] c1: 0x7ffff6034030
+[i] c2: 0x7ffff6034260
+
+Program received signal SIGUSR1, User defined signal 1.
+pwndbg> x/3gx 0x7ffff6034030
+0x7ffff6034030:	0x0000000000000001	0x00007ffff60101e0
+0x7ffff6034040:	0x0000000000b460a0	
+pwndbg> x/3gx 0x7ffff6034260
+0x7ffff6034260:	0x0000000000000001	0x00007ffff60101e0
+0x7ffff6034270:	0x0000000000b460a0
+```
+
+The pointer to type_handler of c1 lies at 0x7ffff6034040 and to c2 lies at 0x7ffff6034270. As you can see those pointers are equal meaning they point to same type_handler_t structure. 
+
+## Vulnerability
+So it look legit, right? Well not exactly. There is huge flaw in the way the program checks if there already exists a type_handler. By looking at how the `getTypeHandler` and `listIsEquivalent` functions you should nitice that two collections:
+
+```python3
+c1 = Collection.Collection({'a': 1, 'b': [2]})
+c2 = Collection.Collection({'b': [3, 4], 'a': 5)
+```
+
+will share the same type handler! And this is great for us as it leads to type confusion!
+
+## get
+We havn't look at get yet. How it works? Lets say we want to find the result of `c1.get('a')`. This is how the collection_t looks like for `c1`.
+
+![](img/collection.png)
+
+The program needs to find: 1) the position of 'a' key. 2) the type of value associated to 'a' key. 
+
+The 1 is done just be iterating from `tail` to `head` and comparing the record names.
+When the program finds the record with the name equal to passed argument it checks the `type` field. If `type` is equal to 1 (which is in this case) it indicates that the value stored at values[0] is of raw type and must be packed before returned to the user. This is why it gets converted to PyLong.
+
+On the other hand if we ask for `c1.get('b')`, the program finds the index – which is 1, checks the `type` field of record with name 'b'. The type is equal to 0, meaning that the values[1] is of PyObject type and can be returned to user witout any conversion.
+
+Till this point everything should be clear. But how does it look like when it comes to type confusion. Look at `c2` defined above. As we have mentioned it has exactly the same `type_handler`, but the values look different:
+
+![](img/collection2.png)    
