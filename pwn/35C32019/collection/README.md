@@ -215,4 +215,14 @@ Next, for containers such as lists we have a `length` field. In this example our
 ## Back to RE
 With this knowledge the reverse engineering part should be quite easy. The `__new__` method just checks that when creating a new Collection a user provided a dictionary with no more then 32 keys.
 
-The `__init__` function is much longer. 
+The `__init__` function is much longer. It starts with some type checking. Every key of provided dictionary must be string and every value must be either long, list or dictionary.
+
+```python3
+c = Collection.Collection({'a': 8, 'b': {'aaa': 'bbb'}, 'c': [], 'd': 9}) # Correct collection as all values are of a correct types
+
+c2 = Collection.Collection([1, 2, 3]) # Will fail as constructor expects dictionary
+
+c3 = Collection.Collection({'a': 'bbb'}) Will fail as value is not long, list nor dictionary
+```
+
+After `__init__` does some type checking it build an interesting cache.
