@@ -222,7 +222,29 @@ c = Collection.Collection({'a': 8, 'b': {'aaa': 'bbb'}, 'c': [], 'd': 9}) # Corr
 
 c2 = Collection.Collection([1, 2, 3]) # Will fail as constructor expects dictionary
 
-c3 = Collection.Collection({'a': 'bbb'}) Will fail as value is not long, list nor dictionary
+c3 = Collection.Collection({'a': 'bbb'}) #  Will fail as value is not long, list nor dictionary
 ```
 
-After `__init__` does some type checking it build an interesting cache.
+After `__init__` does some type checking it creates a new Collection. 
+
+```c
+struct collection_t {
+    size_t ref_cnt; # standard PyObject field
+    PyObject *type; # standard PyObject field
+    type_handler_t *type_handler;
+    void*[32] values;
+};
+```
+
+While `ref_cnt` and `type` are standard PyObject fields, the type_handler is more interesting. 
+It stores information about the dictionary entries. This information is stored in form of a linked
+list. 
+Each record in the list has name of the key and type field which can be either 0 or 1. 
+1 indicates that the value is of basic type – long and 0 that it is of type list/dictionary.
+
+Let's see some examples:
+
+c = Collection.Collection({'a': 8, 'b': {'bb': 8}, 'c': [1, 2, 3]})
+The type handler will look like:
+
+[  ] --> []
