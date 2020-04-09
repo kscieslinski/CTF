@@ -329,3 +329,26 @@ Till this point everything should be clear. But how does it look like when it co
 So this time let's ask for `c2.get('a')`. The program is checking the type and the position. The position is `0` (not 1!!!) and the type is `1` indicating it is a raw type. So the program will return the address of list [3, 4]!!!
 
 ## Arbitrary read/write
+Now we need some feng shui to gain arbitrary read/write. We will use `bytes`, `bytearray`, `list` types.
+
+The `bytes` type is very similar to `string` type:
+
+```c
+struct PyBytes {
+    size_t ref_cnt;
+    PyObject *type;
+    size_t len;
+    long hash;
+    char ob_val[];
+};
+
+struct PyBArr {
+    size_t ref_cnt;
+    PyObject *type;
+    size_t len;
+    size_t ob_alloc;
+    char *ob_bytes;    
+    char *ob_start;    
+}
+```
+
