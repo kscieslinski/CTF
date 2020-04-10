@@ -20,7 +20,7 @@ Same as with kernel tasks I've decided to look at sandbox escapes.
     </tr>
     <tr>
         <td>HackCert</td>
-        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/35C32019/collection">PySand</a></td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/hackcert/pysand">PySand</a></td>
         <td>sandbox, python, audithook, sys.modules</td>
         <td></td>
     </tr>    
