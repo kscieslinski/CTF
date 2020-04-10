@@ -1,16 +1,24 @@
 # PySand (sandbox, python, audithook, sys.modules)
-Python 3.8 introduced new audithook feature. You can read more about them in [PEP 578](https://www.python.org/dev/peps/pep-0578/) and [PEP 551](https://www.python.org/dev/peps/pep-0551/). The idea is to increase the ability to monitor suspicious actions taken by attackers. Both documents emphasize that this feature should not be used as prevention mechanism:
+Python 3.8 introduced new audithook feature. You can read more about it in [PEP 578](https://www.python.org/dev/peps/pep-0578/) and [PEP 551](https://www.python.org/dev/peps/pep-0551/). The idea was to increase the ability to monitor suspicious actions taken by attackers. Both documents emphasize that this feature should not be used as prevention mechanism:
 
 ```
-This proposal does not attempt to restrict functionality, but simply exposes the fact that the functionality is being used. Particularly for intrusion scenarios, detection is significantly more important than early prevention (as early prevention will generally drive attackers to use an alternate, less-detectable, approach). The availability of audit hooks alone does not change the attack surface of Python in any way, but they enable defenders to integrate Python into their environment in ways that are currently not possible.
+This proposal does not attempt to restrict functionality, but simply exposes the
+ fact that the functionality is being used. Particularly for intrusion scenarios, 
+ detection is significantly more important than early prevention (as early 
+ prevention will generally drive attackers to use an alternate, less-detectable, 
+ approach). The availability of audit hooks alone does not change the attack surface
+  of Python in any way, but they enable defenders to integrate Python into their 
+  environment in ways that are currently not possible.
 ```
 
 Moreover if you are asking yourself how do we implement sandbox in python, then the answer is simple – we don't. Python [documentation](https://python-security.readthedocs.io/security.html) is very strict about this:
 
 ```
 Sandbox
-Don’t try to build a sandbox inside CPython. The attack surface is too large. Python has many introspection features, see for example the inspect module. Python also many convenient features which executes code on demand. Examples:
-
+Don’t try to build a sandbox inside CPython. The attack surface is too large. Python
+ has many introspection features, see for example the inspect module. Python also 
+ many convenient features which executes code on demand. Examples:
+ 
 the literal string '\N{Snowman}' imports the unicodedata module
 the code to log a warning might be abused to execute code
 The good design is to put CPython into a sandbox, not the opposite.
