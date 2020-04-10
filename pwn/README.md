@@ -19,6 +19,12 @@ Same as with kernel tasks I've decided to look at sandbox escapes.
         <th align="center">Notes</th>
     </tr>
     <tr>
+        <td>HackCert</td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/35C32019/collection">PySand</a></td>
+        <td>sandbox, python, audithook, sys.modules</td>
+        <td></td>
+    </tr>    
+    <tr>
         <td>35C3 2019</td>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/35C32019/collection">Collection</a></td>
         <td>sandbox, cpython, type confusion</td>
