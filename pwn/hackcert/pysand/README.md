@@ -44,7 +44,7 @@ You can read which actions invoke audit event [here](https://docs.python.org/3/l
 
 So I started looking at avaible functions in [sys](https://docs.python.org/3/library/sys.html) and [os.path](https://docs.python.org/3/library/os.path.html#module-os.path) and [builtins](https://docs.python.org/3/library/functions.html#built-in-funcs) modules. But I couldn't find anything useful which doesn't invoke audit event.
 
-But then I though of [sys.modules](https://docs.python.org/3/library/sys.html#sys.modules). When python3 starts up it already imports more modules then our program. This is some optimization (I guess, I've never checked) mechanism. 
+But then I though of [sys.modules](https://docs.python.org/3/library/sys.html#sys.modules). When python starts up it in fact imports more modules then our program stated with the `import` statements. This is some optimization (I guess, I've never checked) mechanism. 
 So lets check which modules have been loaded:
 
 ```console
