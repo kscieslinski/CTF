@@ -25,7 +25,7 @@ The good design is to put CPython into a sandbox, not the opposite.
 ```
 
 ## Back to the challenge
-In the challenge we are given a simple and at first glance very restrictive sandbox. Every action which invokes audithook is being just stoped and SecurityError is raised.
+In the challenge we are given a simple and at first glance very restrictive sandbox totaly based on audithooks. Every action which invokes audit event is being just stoped and SecurityError is being raised. Of course the challenge creator wanted to proof that audithooks really should not be used to sandbox applications.
 
 ```python3
 #!/usr/bin/env python3.8
