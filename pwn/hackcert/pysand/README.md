@@ -16,7 +16,7 @@ the code to log a warning might be abused to execute code
 The good design is to put CPython into a sandbox, not the opposite.
 ```
 
-## Back to challenge
+## Back to the challenge
 In the challenge we are given a simple and at first glance very restrictive sandbox. Every action which invokes audithook is being just stoped and SecurityError is raised.
 
 ```python3
