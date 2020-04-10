@@ -2,12 +2,12 @@
 Python 3.8 introduced new audithook feature. You can read more about it in [PEP 578](https://www.python.org/dev/peps/pep-0578/) and [PEP 551](https://www.python.org/dev/peps/pep-0551/). The idea was to increase the ability to monitor suspicious actions taken by attackers. Both documents emphasize that this feature should not be used as prevention mechanism:
 
 ```
-This proposal does not attempt to restrict functionality, but simply exposes the 
-fact that the functionality is being used. Particularly for intrusion scenarios, 
-detection is significantly more important than early prevention (as early 
-prevention will generally drive attackers to use an alternate, less-detectable, 
-approach). The availability of audit hooks alone does not change the attack surface 
-of Python in any way, but they enable defenders to integrate Python into their 
+This proposal does not attempt to restrict functionality, but simply exposes the
+fact that the functionality is being used. Particularly for intrusion scenarios,
+detection is significantly more important than early prevention (as early
+prevention will generally drive attackers to use an alternate, less-detectable,
+approach). The availability of audit hooks alone does not change the attack surface
+of Python in any way, but they enable defenders to integrate Python into their
 environment in ways that are currently not possible.
 ```
 
