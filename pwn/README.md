@@ -19,6 +19,12 @@ Same as with kernel tasks I've decided to look at sandbox escapes.
         <th align="center">Notes</th>
     </tr>
     <tr>
+        <td>Google 2019 Quals</td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/googlectf2019/sandbox-caas">caas-sandbox</a></td>
+        <td>sandbox, net namespace, sockets, shellcode</td>
+        <td>g++, objcopy to extract shellcode from C</td>
+    </tr> 
+    <tr>
         <td>HackCert</td>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/hackcert/pysand">PySand</a></td>
         <td>sandbox, python, audithook, sys.modules</td>

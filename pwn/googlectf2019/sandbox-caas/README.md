@@ -200,6 +200,93 @@ bool SafeRead(pid_t pid, const void *addr, size_t size, std::string *buf) {
       return !strncmp(buf, actual, strlen(buf));
     }
   };
+
+  bool is_blocked = false;
+  // Try a couple of times, the process might not have called read / recvmsg
+  // yet.
+  for (int i = 0; !is_blocked && i < 3; i++) {
+    is_blocked = is_process_blocked_by(pid, __NR_read) ||
+                 is_process_blocked_by(pid, __NR_recvmsg);
+    struct timespec t = {};
+    t.tv_sec = 0;
+    t.tv_nsec = 100000;
+    nanosleep(&t, nullptr);
+  }
+
+  if (!is_blocked) {
+    fprintf(stderr, "Process still not blocked on syscall.\n");
+    return false;
+  }
+
+  int n_threads = -1;
+  if (!GetNumberOfThreads(pid, &n_threads) || n_threads > 1) {
+    fprintf(stderr, "Error: n_threads > 1\n");
+    return false;
+  }
+
+  if (process_vm_readv(pid, &iov_local, 1, &iov_remote, 1, 0) < 0) {
+    perror("process_vm_readv");
+    return false;
+  }
+
+  return true;
+}
 ```
 
-It checks if the process is blocked on read and 
+## One more bug
+It checks if the process is blocked on `read` syscall and the `Threads` number from `status` file. We can pass the first check by creating a new thread which will modify the hostname while the parent process will be blocked on read.
+But wouldn't `SafeRead` detect it with the `Threads` check? Well no. And to be fair I could not find the reason till I followed the flow in gdb. It turned out that the bug is the `ReadWholeFile` function which `GetNumberOfThreads` uses to read the `/proc/<pid>/status` file. Let's check the body of the function:
+
+```c++
+bool ReadWholeFile(const char *path, std::string *buf) {
+  std::unique_ptr<FILE, decltype(&fclose)> f(fopen(path, "rb"), &fclose);
+  if (!f) {
+    return false;
+  }
+
+  if (fseek(f.get(), 0, SEEK_END)) {
+    fprintf(stderr, "fseek failed\n");
+    return false;
+  }
+
+  size_t filesize = ftell(f.get());
+  if (fseek(f.get(), 0, SEEK_SET)) {
+    fprintf(stderr, "fseek failed\n");
+    return false;
+  }
+
+  // Read whole buffer.
+  buf->resize(filesize);
+
+  std::string &buf_ = *buf;
+  fread(&buf_[0], 1, filesize, f.get());
+  return true;
+}
+```
+
+Can you spot the bug? Well the problem is that `filesize` will be 0, because of how procfs files work and therefore the number of threads will be 0.
+
+
+## Code
+As I pointed out at the begining, I've failed for some unknown reasons to implement my exploit in assembler. ReceiveFD succeeded and returned 1 as result, but no socket was created. I've looked through the net to see how other people have implemented it and I've found out this [writeup](https://ctftime.org/writeup/15869) which shows how to create shellcode with g++ and objcopy.
+
+## POC
+I had to try multiple times as race condition vulnerabilities are not very reliable, but finally I've received the flag:)
+
+```console
+$ python3 exp.py REMOTE
+[*] '/home/k/caas/challenge'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      PIE enabled
+[+] Opening connection to caas.ctfcompetition.com on port 1337: Done
+[+] Receiving all data: Done (32B)
+[*] Closed connection to caas.ctfcompetition.com port 1337
+b'CTF{W3irD_qu1rKs}\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+[*] Switching to interactive mode
+[*] Got EOF while reading in interactive
+$
+```
+
