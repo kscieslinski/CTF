@@ -76,3 +76,130 @@ There are two types of requests that a sandboxed process can send, but only one 
 So let's check out ConnectToMetadataServerRequest.
 
 ![](img/conn.png)
+
+It takes a <b>pointer</b> to a hostname string and an uint16_t port number. It then checks if the request is valid:
+
+```c++
+template <>
+bool ValidateRequest(pid_t pid, const ConnectToMetadataServerRequest &req) {
+  static constexpr std::pair<const char *, uint16_t> allowed_hosts[] = {
+    // Allow service to connect to the metadata service to obtain secrets etc.
+    {"127.0.0.1", 8080},          // Early access.
+    // {"169.254.169.254", 80},   // Full blown metadata service, not yet implemented
+  };
+  std::string host;
+  if (!SafeRead(pid, req.hostname, 4 * 3 + 3, &host)) {
+    return false;
+  }
+
+  fprintf(stderr, "host: %s port: %d\n", host.c_str(), req.port);
+
+  bool allowed = false;
+  for (const auto &p : allowed_hosts) {
+    if (!strcmp(p.first, host.c_str()) && p.second == req.port) {
+      allowed = true;
+    }
+  }
+
+  return allowed;
+}
+```
+
+All this function does is it retrieves the hostname string from the sandboxed process memory space via SafeRead and then checks if hostname and port provided are in the whitelist. So for example if sandboxed process would ask a RPC Server to connect it to Flag Server this request would not pass the ValidateRequest function.
+
+Let's see what happens next, so when the request was marked as valid.
+
+```c++
+
+template <>
+bool ExecuteRequest(pid_t pid, const ConnectToMetadataServerRequest &req, ConnectToMetadataServerResponse *res,
+                    int *fd_to_send) {
+  std::string host;
+  if (!SafeRead(pid, req.hostname, 31, &host)) {
+    return false;
+  }
+
+  *fd_to_send = socket(AF_INET, SOCK_STREAM, 0);
+  struct sockaddr_in serv_addr = {};
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_port = htons(req.port);
+
+  if (inet_pton(AF_INET, host.c_str(), &serv_addr.sin_addr.s_addr) != 1) {
+    fprintf(stderr, "inet_pton failed\n");
+    *fd_to_send = -1;
+    res->success = false;
+  } else if (connect(*fd_to_send, (struct sockaddr *)&serv_addr,
+                     sizeof(sockaddr_in)) < 0) {
+    perror("connect");
+    res->success = false;
+  } else {
+    res->success = true;
+  }
+  return true;
+}
+```
+
+Then the RPC Server will convert the hostname to binary form using inet_pton and try to establish the connection with the socket. Nothing complicated. 
+
+## Vulnerabilities
+After looking at how the whole infrastructure looks like and how the sandboxed process was supposed to communicate with the RPC Server it is time to think of what could go wrong. 
+
+### Time of check, time of use
+One of vulnerabilities is quite obvious. After the request passes the validation the RPC Server again invokes `SafeRead` function to get the hostname. Remember that the hostname string lies in memory of sandboxed process, so it can just modify it.
+So as an attacker we could make RPC Server try to connect to some other address then 127.0.0.1. Unfortunately for us, we cannot modify the port as it was passed as an integer in the request. So is there anything we can achieve?
+
+### Sockets and namespaces
+Of course, after all this is a CTF challenge! Sockets belong to network namespace in which they have been created. So the next question is, why do we need time of check, time of use, can't we just reconnect the valid socket associated with Metadata Server to Flag Server? Well according to [man](http://man7.org/linux/man-pages/man2/connect.2.html) page:
+
+```
+Some protocol sockets (e.g., UNIX domain stream sockets) may
+successfully connect() only once.
+
+Some protocol sockets (e.g., datagram sockets in the UNIX and
+Internet domains) may use connect() multiple times to change their
+association.
+```
+
+So unfortunately for us, the stream sockets can be connected only once. But here comes the third bug! When connect fails, the `fd_to_send` is not being set to -1 and therefore the socket will be send to us anyway!
+
+## Exploit
+So to sum up. We want to make connect fail by winning race condition and changing the hostname just after `ValidateRequest` but before `SafeRead` from `ExecuteRequest`. Then we will receive the unconnected stream socket which belongs to outer network namespace and so we can use it to connect to Flag Server and read the flag.
+
+## SafeRead
+The last problem is how will we win the race condition. I havn't yet looked in the implementation details of `SafeRead` which is used to retrieve the hostname from sandboxed process memory:
+
+```c++
+bool SafeRead(pid_t pid, const void *addr, size_t size, std::string *buf) {
+  buf->resize(size + 1);
+  struct iovec iov_remote = {};
+  iov_remote.iov_base = (void *)addr;
+  iov_remote.iov_len = size;
+
+  struct iovec iov_local = {};
+  iov_local.iov_base = (void *)buf->data();
+  iov_local.iov_len = size;
+
+  // Make sure that the calling process is blocked in read() or recvmsg().
+  auto is_process_blocked_by = [](pid_t pid, int syscall_no) {
+    char buf[5];
+    snprintf(buf, sizeof(buf), "%d", syscall_no);
+
+    char path[PATH_MAX];
+    snprintf(path, PATH_MAX, "/proc/%d/syscall", pid);
+    int f = open(path, O_RDONLY);
+    if (f == -1) {
+      perror("open()");
+      return false;
+    } else {
+      char actual[5] = {};
+      if (read(f, actual, sizeof(actual) - 1) != sizeof(actual) - 1) {
+        close(f);
+        return false;
+      }
+      close(f);
+      return !strncmp(buf, actual, strlen(buf));
+    }
+  };
+```
+
+It checks if the process is blocked on read and 
