@@ -1,19 +1,19 @@
 # Sandybox (sandbox, ptrace, int3)
 
-This was the lowest scored pwn challenge in PlaidCTF 2020, but still very interesting one! In this challenge we have an example of sandbox implemented using `ptrace`. If you havn't solved the challenge yourself – I strongly encourage you to watch a great presentation by Robert Swiecki [Escaping the (sand)box](https://www.youtube.com/watch?v=gJpaxisyQfY) and give it one more try:)
+This was the lowest scored pwn challenge in PlaidCTF 2020, but still very interesting one! In this challenge we have an example of sandbox implemented using `ptrace`. If you havn't solved the challenge – I strongly encourage you to watch a great presentation by Robert Swiecki [Escaping the (sand)box](https://www.youtube.com/watch?v=gJpaxisyQfY) and give it one more try:)
 
 Note that there are multiple ways of solving this challenge. If I mention that some particular operation is not interesting it means that it is no interesting for my exploitation path:)
 
 ## Source
 Challenge creators provided us with binary. I have to say that I hate when pwn creators don't give the source code to participants. Especially when reversing part is not challenging, but just takes time.
-But back to the challenge. The reversing part was rather simply as the binary was small in size. You can check the full pseudocode [here](source.c).
+But back to the challenge. The reversing part was rather simple as the binary was small in size. You can check the full pseudocode [here](source.c).
 
 ## Flow
 The very simplified flow is as follows:
 1) Program does have some `rlimits` limitations, restricting the cpu usage, file sizes and numer of processes. Nothing interesting.
 2) Then the `fork` is being invoked. The child is going to be sandboxed and the parent is going to be the supervisor. 
-3) [Child] The child calls `ptrace` with `PTRACE_TRACEME` flag, stops and waits for parent to start tracing it.
-3) [Parent] The parent starts tracing the child. In infinite loop he waits for the child to invoke syscall, then it checks if it should allow the syscall or block it. And again till the child dies, exits or timeouts.
+3 – child) [Child] The child calls `ptrace` with `PTRACE_TRACEME` flag, stops and waits for parent to start tracing it.
+3 – parent) [Parent] The parent starts tracing the child. In infinite loop he waits for the child to invoke syscall, then it checks if it should allow the syscall or block it. And again till the child dies, exits or timeouts.
 4) [Child] Child mmaps a region, reads 10 bytes of shellcode from user to this region and finaly jumps to it.
 
 ## 10 Bytes
