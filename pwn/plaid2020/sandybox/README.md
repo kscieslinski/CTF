@@ -12,8 +12,8 @@ But back to the challenge. The reversing part was rather simple as the binary wa
 The very simplified flow is as follows:
 1) Program does have some `rlimits` limitations, restricting the cpu usage, file sizes and numer of processes. Nothing interesting.
 2) Then the `fork` is being invoked. The child is going to be sandboxed and the parent is going to be the supervisor. 
-3 – child) [Child] The child calls `ptrace` with `PTRACE_TRACEME` flag, stops and waits for parent to start tracing it.
-3 – parent) [Parent] The parent starts tracing the child. In infinite loop he waits for the child to invoke syscall, then it checks if it should allow the syscall or block it. And again till the child dies, exits or timeouts.
+3) [Child] The child calls `ptrace` with `PTRACE_TRACEME` flag, stops and waits for parent to start tracing it.
+3) [Parent] The parent starts tracing the child. In infinite loop he waits for the child to invoke syscall, then it checks if it should allow the syscall or block it. And again till the child dies, exits or timeouts.
 4) [Child] Child mmaps a region, reads 10 bytes of shellcode from user to this region and finaly jumps to it.
 
 ## 10 Bytes
