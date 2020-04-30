@@ -8,6 +8,23 @@ Every directory consists of:
 - img/ folder where I place some screenshots/pictures
 
 
+## Windows Tasks
+As I have no experience with hacking windows machines I rarely try to approach windows based challenges during CTFs. And as I came across two really cool tasks in which we had to exploit games I've decided to create this small category.
+<table>
+  <tbody>
+    <tr>
+        <th align="center">Challenge</th>
+        <th align="center">Tags</th>
+        <th align="center">Notes</th>
+    </tr>
+    <tr>
+        <td><a href=""></a></td>
+        <td>Heroes of Might and PWN</td>
+        <td>windows, game, virtual alloc</td>
+    </tr>
+  </tbody>
+</table>
+
 ## Old sandbox escape tasks
 Same as with kernel tasks I've decided to look at sandbox escapes. 
 <table>
@@ -18,6 +35,12 @@ Same as with kernel tasks I've decided to look at sandbox escapes.
         <th align="center">Tags</th>
         <th align="center">Notes</th>
     </tr>
+    <tr>
+        <td>Plaid 2020 Quals</td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/plaid2020/sandybox">caas-sandbox</a></td>
+        <td>sandbox, ptrace, exit entry mismatch</td>
+        <td></td>
+    </tr> 
     <tr>
         <td>Google 2019 Quals</td>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/googlectf2019/sandbox-caas">caas-sandbox</a></td>
