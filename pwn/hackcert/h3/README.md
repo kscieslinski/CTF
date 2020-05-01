@@ -289,4 +289,4 @@ Put it into exploit
 
 
 
-![]('img/poc.gif')
+![](img/poc.gif)
