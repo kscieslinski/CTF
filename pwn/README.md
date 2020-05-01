@@ -18,9 +18,9 @@ As I have no experience with hacking windows machines I rarely try to approach w
         <th align="center">Notes</th>
     </tr>
     <tr>
-        <td><a href=""></a></td>
-        <td>Heroes of Might and PWN</td>
-        <td>windows, game, virtual alloc</td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/hackcert/h3">Heroes of Might and PWN</a></td>
+        <td>windows, game, seh, virtual alloc</td>
+        <td></td>
     </tr>
   </tbody>
 </table>
