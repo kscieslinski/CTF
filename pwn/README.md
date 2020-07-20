@@ -25,6 +25,25 @@ As I have no experience with hacking windows machines I rarely try to approach w
   </tbody>
 </table>
 
+## VM escapes
+<table>
+  <tbody>
+    <tr>
+        <th align="center">CTF</th>
+        <th align="center">Challenge</th>
+        <th align="center">Tags</th>
+        <th align="center">Notes</th>
+    </tr>
+    <tr>
+        <td>Seccon2017</td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/seccon2017/vm_no_fun">vm_no_fun</a></td>
+        <td>custom vm</td>
+        <td></td>
+    </tr>
+  </tbody>
+</table>
+
+
 ## Old sandbox escape tasks
 Same as with kernel tasks I've decided to look at sandbox escapes. 
 <table>
@@ -37,7 +56,7 @@ Same as with kernel tasks I've decided to look at sandbox escapes.
     </tr>
     <tr>
         <td>Plaid 2020 Quals</td>
-        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/plaid2020/sandybox">caas-sandbox</a></td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/plaid2020/sandybox">sandybox</a></td>
         <td>sandbox, ptrace, exit entry mismatch</td>
         <td></td>
     </tr> 
