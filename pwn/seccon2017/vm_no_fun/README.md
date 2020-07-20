@@ -16,5 +16,23 @@ extra_segment_w: [0x8000, 0x8fff]
 stack_segment:   [0x9000, 0xffff]
 ```
 
+This segmentation is achieved with special purpose registers: `cs`, `ds`, `es`, `ss`. So let's say we have an operation which will pop value from the stack:
+
+```
+OPCODE_POP_WORD:
+    if (ss * 16 + sp > MEM_SIZE)
+        raise(SIGSEGV);
+
+    if (dest_word)
+        *dest_word = *((uint16_t *) &vm1_mem[ss * 16 + sp]);
+```
+
 ![](img/segments.png)
 
+Code segment, data segment and stack all speak for itself. The interesting is extra segment. It is again divided into two parts each 0x1000 bytes and is used for interacting with the other vms or IO in case of VM1.
+The point is that we can interact using stdin/stdout only with VM1. When we run vm2 it will load code from vm1 extra_segment_write instead of stdin.
+
+![](img/interaction.png)
+
+
+## Vulnerabilities
