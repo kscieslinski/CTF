@@ -74,7 +74,7 @@ This means that the <b>virtual</b> memory in the host: `[aligned_guest_mem, alig
 ![](img/mem0.svg)
 This means that the last bytes of guest physical memory come from outside of `guest_mem` buffer.
 
-## Exploitation
+## Accessing host memory
 As pointed above, the last bytes in guest physical memory come from outside of `guest_mem` buffer. The goal is obvious, we need a way to access this memory as we could then for example overwrite the return address of the `host` and so escape the vm. You might wonder, if we can execute code inside the guest, can't we just access this memory like this?
 
 ```asm
@@ -87,6 +87,13 @@ And the answer is no. Why? Because of paging. When we try to reach memory at add
 The pages are at guest memory [0x4000, 0x8000]. I don't like the names PLM4, PDP, PD, PT and so I will call them P4, P3, P2, P1.
 
 ![](img/pages.svg)
+
+So as I hope you can tell from the above explanation, when trying to access `virtual address` 0x7ff0 on guest the mmu:
+<b>I.</b> Checks cr3 for address of P4. In this case it sees that the P4 is add physical address 0x4000.
+<b>II.</b> Check that the bits highest 9 bits of 0x7ff0 are b'000000000' = 0 and so it looks at index 0 of P4 table for physical address of P3 table. You might ask the entry in the table contains 0x5003 instead of 0x5000? Well, the lowest 12 bits are used for additional informations. The important for us are bits 0 and bit 1 which determinate whether we can access this page for writing (2^0 + 2^1 = 3).
+<b>III.</b> It proceeds to P3 table. Again, it looks at the next 9 bits of 0x7ff0 which are again b'000000000' = 0 and so it looks at index 0 of P3 table for physical address of P2 table which turns out to be 0x6000.
+<b>IV.</b>  It proceeds to P2 table. Again, it looks at the next 9 bits of 0x7ff0 which are again b'000000000' = 0 and so it looks at index 0 of P2 table for physical address of P1 table which turns out to be 0x7000.
+<b>V.</b>  It proceeds to P1 table. Again, it looks at the next 9 bits of 0x7ff0 which are b'00000111' = 8 and so it looks at index 8 of P1 table for physical address of a physical page. But under this index there is 0 (or some random address from host) which almost for sure doesn't have valid page bits set and so it generates an segfault.
 
 
 
