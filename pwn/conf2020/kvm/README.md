@@ -1,6 +1,7 @@
 # kvm (vm escape, kvm, long mode)
 This was one of the most interesting challenges I've seen recently. I always wanted to learn about the misterious vm escapes and this was a great opportunity.
 ![](img/task.png)
+Note, that I've solved this challenge together with `Iga Supinska`.
 
 ## Files
 ```bash
@@ -96,6 +97,10 @@ So as I hope you can tell from the above explanation, when trying to access `vir
 <b>V.</b>  It proceeds to P1 table. Again, it looks at the next 9 bits of 0x7ff0 which are b'00000111' = 8 and so it looks at index 8 of P1 table for physical address of a physical page. But under this index there is 0 (or some random address from host) which almost for sure doesn't have valid page bits set and so it generates an segfault.</br>
 
 
+## Substitude cr3
+So at first glance it may seem that we cannot access the host memory as every time we try to access virtual memory outside of range `[0x0, 0x4000]` we get a segfault as the mapping is missing. But noone told us we cannot change the value of `cr3`! And so we can create our own page tables P4', P3', P2', P1' inside memory range `[0x0, 0x4000]` and make P1 have an entry with value `0x7003`. Finally we can set `cr3` to point to our memory. This way we can legitimaly access such memory. 
+
+![](img/mem1.svg)
 
 ## References
 I) [Using KVM API](https://lwn.net/Articles/658511/)<br>
