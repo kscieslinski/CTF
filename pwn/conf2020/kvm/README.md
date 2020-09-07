@@ -71,6 +71,9 @@ int main()
 <b>IV.</b> As mentioned above, after aligning the memory, the program invokes `KVM_SET_USER_MEMORY_REGION` to allocate 0x8000 bytes of memory for the guest.
 This means that the <b>virtual</b> memory in the host: `[aligned_guest_mem, aligned_guest_mem + 0x8000]` will be seen in guest as <b>physical</b> memory as `[0, 0x8000]`. Well, can you spot the bug? The `aligned_guest_mem + 0x8000` overflows the allocated `guest_mem` buffer! The `region.memory_size` should be at maximum of `0x8000 - (aligned_guest_mem - guest_mem)` bytes!</br> 
 
+![](img/mem0.svg)
+This means that the last bytes of 
+
 ## References
 I) [Using KVM API](https://lwn.net/Articles/658511/)<br>
 II) [KVM hello world](https://github.com/dpw/kvm-hello-world)</br>
