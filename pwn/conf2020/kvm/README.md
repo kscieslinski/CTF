@@ -16,7 +16,7 @@ In the challenge we are given a small binary named `kvm` without any source code
 In general, the program is asking user for some untrusted shellcode and then it is using `kvm` (real kvm, not the provided binary) to spawn a virtual machine in which it will execute this code. So as the task description suggest, our goal is to break out of this sandbox.
 
 ## General overview
-The program is performing standard initialization routine. I've decided not to go throught it as it is explained in details [here](https://lwn.net/Articles/658511/). But it simply opens the `/dev/kvm` device, it creates a virtual machine, allocates a memory for the guest, sets the guest registers and guest special registers, paging and finally it passes the control to the guest vm.
+The program is performing standard initialization routines. I've decided not to go throught it as it is explained in details [here](https://lwn.net/Articles/658511/). But in short it opens the `/dev/kvm` device, it creates a virtual machine, allocates a memory for the guest, sets the guest registers and guest special registers, paging and finally it passes the control to the guest vm.
 
 The non standard thing is that the guest in the article linked above executes in `real mode` while the guest in the challenge executes in `long mode`. This means that there must be some paging included. And indeeed it is as you can see in this part of the code:
 
@@ -44,7 +44,7 @@ int main()
 ```
 
 ## Memory layout and vulnerability
-Before we will show the guest memory layout, let's check out the main vulnerability in the code as it is strictly connected to it. Let's look at the code:
+Let's look how the memory for the guest is being allocated:
 
 ```c
 int main()
@@ -69,7 +69,7 @@ I. Program starts with allocating big buffer on the stack for guest memory which
 II. It then zeros the memory with memset. Without reseting the memory the guest could leak some interesting addresses which are there.</br>
 III. It then creates a pointer `aligned_guest_mem`. Why? Well if you have read the [article](https://lwn.net/Articles/658511/) I've linked above you perhaps remember that the `ioctl(vm_fd, KVM_SET_USER_MEMORY_REGION, &region);` requires that the passed `region.userspace_addr` argument points to aligned memory.</br>
 IV. As mentioned above, after aligning the memory, the program invokes `KVM_SET_USER_MEMORY_REGION` to allocate 0x8000 bytes of memory for the guest.
-This means that the memory in the host: [aligned_guest_mem, aligned_guest_mem + 0x8000] will be seen in guest memory as [0, 0x8000]. Well, can you spot the bug? The aligned_guest_mem + 0x8000 overflows the allocated `guest_mem` buffer! The `region.memory_size` should be at maximum of 0x8000 - (aligned_guest_mem - guest_mem) bytes.</br> 
+This means that the <b>virtual</b> memory in the host: `[aligned_guest_mem, aligned_guest_mem + 0x8000]` will be seen in guest as <b>physical</b> memory as `[0, 0x8000]`. Well, can you spot the bug? The `aligned_guest_mem + 0x8000` overflows the allocated `guest_mem` buffer! The `region.memory_size` should be at maximum of `0x8000 - (aligned_guest_mem - guest_mem)` bytes!</br> 
 
 ## References
 I) [Using KVM API](https://lwn.net/Articles/658511/)<br>
