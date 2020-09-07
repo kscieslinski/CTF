@@ -88,7 +88,7 @@ The pages are at guest memory [0x4000, 0x8000]. I don't like the names PLM4, PDP
 
 ![](img/pages.svg)
 
-So as I hope you can tell from the above explanation, when trying to access `virtual address` 0x7ff0 on guest the mmu:
+So as I hope you can tell from the above explanation, when trying to access `virtual address` 0x7ff0 on guest the mmu:</br>
 <b>I.</b> Checks cr3 for address of P4. In this case it sees that the P4 is add physical address 0x4000.</br>
 <b>II.</b> Check that the bits highest 9 bits of 0x7ff0 are b'000000000' = 0 and so it looks at index 0 of P4 table for physical address of P3 table. You might ask the entry in the table contains 0x5003 instead of 0x5000? Well, the lowest 12 bits are used for additional informations. The important for us are bits 0 and bit 1 which determinate whether we can access this page for writing (2^0 + 2^1 = 3).</br>
 <b>III.</b> It proceeds to P3 table. Again, it looks at the next 9 bits of 0x7ff0 which are again b'000000000' = 0 and so it looks at index 0 of P3 table for physical address of P2 table which turns out to be 0x6000.</br>
