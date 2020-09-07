@@ -35,6 +35,12 @@ As I have no experience with hacking windows machines I rarely try to approach w
         <th align="center">Notes</th>
     </tr>
     <tr>
+        <td>Condifence2020</td>
+        <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/conf2020/kvm">kvm</a></td>
+        <td>vm escape, kvm, long mode</td>
+        <td>overwrite cr3 and setup custom pages</td>
+    </tr>
+    <tr>
         <td>Seccon2017</td>
         <td><a href="https://github.com/kscieslinski/CTF/tree/master/pwn/seccon2017/vm_no_fun">vm_no_fun</a></td>
         <td>custom vm</td>
