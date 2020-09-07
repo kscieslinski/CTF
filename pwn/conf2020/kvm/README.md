@@ -72,7 +72,23 @@ int main()
 This means that the <b>virtual</b> memory in the host: `[aligned_guest_mem, aligned_guest_mem + 0x8000]` will be seen in guest as <b>physical</b> memory as `[0, 0x8000]`. Well, can you spot the bug? The `aligned_guest_mem + 0x8000` overflows the allocated `guest_mem` buffer! The `region.memory_size` should be at maximum of `0x8000 - (aligned_guest_mem - guest_mem)` bytes!</br> 
 
 ![](img/mem0.svg)
-This means that the last bytes of 
+This means that the last bytes of guest physical memory come from outside of `guest_mem` buffer.
+
+## Exploitation
+As pointed above, the last bytes in guest physical memory come from outside of `guest_mem` buffer. The goal is obvious, we need a way to access this memory as we could then for example overwrite the return address of the `host` and so escape the vm. You might wonder, if we can execute code inside the guest, can't we just access this memory like this?
+
+```asm
+mov rax, 0x7ff0
+mov qword ptr [rax], 0x41424344
+```
+
+And the answer is no. Why? Because of paging. When we try to reach memory at address `0x7ff0` it is treated as virtual memory which mmu converts then to physical memory. In fact it first converts it to linear address, but as all segment bases are set to 0 and limits to 0xffff this convertion is unnoticible and I will skip it.
+
+The pages are at guest memory [0x4000, 0x8000]. I don't like the names PLM4, PDP, PD, PT and so I will call them P4, P3, P2, P1.
+
+![](img/pages.svg)
+
+
 
 ## References
 I) [Using KVM API](https://lwn.net/Articles/658511/)<br>
